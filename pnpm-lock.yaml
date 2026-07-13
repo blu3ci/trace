@@ -51,6 +51,9 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0
     devDependencies:
+      '@clerk/eslint-plugin':
+        specifier: ^0.2.0
+        version: 0.2.0(eslint@9.39.5(jiti@2.7.0))
       '@tailwindcss/postcss':
         specifier: ^4
         version: 4.3.2
@@ -254,6 +257,13 @@ packages:
   '@clerk/backend@3.11.4':
     resolution: {integrity: sha512-w4SaKIMuXYJY9bU70ZHxNZtam0GYWlT0IIN7QHsZ1p9LC+v6P/JyHqVK9PNiXjcjVTZymMxkm5d9N6//9MBDzg==}
     engines: {node: '>=20.9.0'}
+
+  '@clerk/eslint-plugin@0.2.0':
+    resolution: {integrity: sha512-j9o85RYTAOG8Sm++oCDYatw0XYOY4avOTj1aNFQooU+hQdjn/fVAPwPYNCMklXogguO/1bJpb+lQEdG68x75Cg==}
+    engines: {node: '>=20.9.0'}
+    hasBin: true
+    peerDependencies:
+      eslint: '>=9'
 
   '@clerk/nextjs@7.5.17':
     resolution: {integrity: sha512-6RtpFRQ9VhQzMe9vjhVgcVHM6oeSEn+ZP8TYTbnluJG18F+tcIM8FHn4QMGn0tZvPfDxmODKeyZR4gz8FJ620g==}
@@ -3711,6 +3721,10 @@ snapshots:
     transitivePeerDependencies:
       - react
       - react-dom
+
+  '@clerk/eslint-plugin@0.2.0(eslint@9.39.5(jiti@2.7.0))':
+    dependencies:
+      eslint: 9.39.5(jiti@2.7.0)
 
   '@clerk/nextjs@7.5.17(next@16.2.10(@babel/core@7.29.7)(babel-plugin-react-compiler@1.0.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))(react-dom@19.2.4(react@19.2.4))(react@19.2.4)':
     dependencies:
