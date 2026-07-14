@@ -1,3 +1,4 @@
+import { Block } from "@blocknote/core";
 import {
   pgTable,
   uuid,
@@ -7,7 +8,6 @@ import {
   index,
   varchar,
 } from "drizzle-orm/pg-core";
-import { SerializedEditorState } from "lexical";
 
 const createdAt = timestamp("created_at").defaultNow().notNull();
 const updatedAt = timestamp("updated_at")
@@ -21,7 +21,7 @@ export const documentsTable = pgTable(
     id: uuid("id").primaryKey().defaultRandom(),
     clerkUserId: text("clerk_user_id").notNull(),
     title: varchar("title", {length: 255}).default("Untitled Document").notNull(),
-    content: json("content").$type<SerializedEditorState>(),
+    content: json("content").$type<Block[]>(),
     createdAt,
     updatedAt,
   },

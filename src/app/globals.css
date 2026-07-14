@@ -3,6 +3,7 @@
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
+@source "../node_modules/@blocknote/shadcn";
 
 @theme inline {
   --color-background: var(--background);
@@ -127,51 +128,4 @@
   html {
     @apply font-sans;
   }
-}
-
-.trace-content-editable {
-  color: #202124;
-  font-family: Georgia, "Times New Roman", serif;
-  font-size: 1.125rem;
-  line-height: 1.8;
-}
-
-.trace-content-editable p {
-  margin: 0 0 1rem;
-}
-
-.trace-editor-heading-h1 {
-  margin: 0.25rem 0 1.25rem;
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  font-size: 2.25rem;
-  font-weight: 650;
-  letter-spacing: -0.04em;
-  line-height: 1.15;
-}
-
-.trace-editor-heading-h2 {
-  margin: 1.75rem 0 0.75rem;
-  font-family: ui-sans-serif, system-ui, sans-serif;
-  font-size: 1.5rem;
-  font-weight: 650;
-  letter-spacing: -0.025em;
-  line-height: 1.25;
-}
-
-.trace-editor-list-ul,
-.trace-editor-list-ol {
-  margin: 0 0 1rem 1.5rem;
-  padding: 0;
-}
-
-.trace-editor-list-ul { list-style: disc; }
-.trace-editor-list-ol { list-style: decimal; }
-.trace-editor-list-item { margin: 0.25rem 0; }
-
-.trace-editor-quote {
-  margin: 1.5rem 0;
-  border-left: 3px solid #9bb7a0;
-  padding-left: 1rem;
-  color: #53615a;
-  font-style: italic;
 }

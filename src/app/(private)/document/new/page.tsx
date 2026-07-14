@@ -21,7 +21,7 @@ import {
   FieldLabel,
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { newDocumentSchema } from "@/formSchemas/newDocument";
+import { newDocumentSchema } from "@/formSchemas/document";
 import Link from "next/link";
 import { createDocument } from "@/server/actions/documents";
 import { FilePlus } from "lucide-react";

@@ -9,7 +9,6 @@ import {
   Quote,
   Sparkles,
   Stamp,
-  Type,
 } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
