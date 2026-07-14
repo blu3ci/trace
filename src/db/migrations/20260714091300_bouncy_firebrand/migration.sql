@@ -1,0 +1,1 @@
+ALTER TABLE "documents" ALTER COLUMN "title" SET DATA TYPE varchar(255) USING "title"::varchar(255);

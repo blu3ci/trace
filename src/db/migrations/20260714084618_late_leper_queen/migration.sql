@@ -1,0 +1,1 @@
+ALTER TABLE "documents" DROP CONSTRAINT "documents_clerk_user_id_key";
