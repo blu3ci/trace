@@ -7,5 +7,5 @@ export default async function DocumentPage({
 }) {
   const { documentId } = await params;
 
-  return <DocumentEditor />;
+  return <DocumentEditor documentId={documentId} />;
 }
