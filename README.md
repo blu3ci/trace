@@ -58,12 +58,3 @@ pnpm start
 | `pnpm db:generate` | Generate Drizzle migration files. |
 | `pnpm db:migrate` | Apply database migrations. |
 | `pnpm db:studio` | Open Drizzle Studio. |
-
-## TODO
-
-- [ ] Add automated tests for core application flows.
-- [ ] Add CI checks for linting and production builds.
-- [ ] Document the database schema and migration workflow.
-- [ ] Add a deployment guide, including required environment variables.
-- [ ] Add error monitoring and structured application logging.
-- [ ] Review accessibility across interactive user interfaces.
