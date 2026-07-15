@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/card";
 import { db } from "@/db";
 import { auth } from "@clerk/nextjs/server";
+import { Block } from "@blocknote/core";
 import { FilePlusCorner, FileText } from "lucide-react";
 import Link from "next/link";
 
@@ -35,8 +36,8 @@ export default async function DashboardPage() {
       <section aria-label="Documents">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <CreateDocument />
-          {documents.map(({ id, title }) => (
-            <Document key={id} id={id} title={title} />
+          {documents.map(({ id, title, content }) => (
+            <Document key={id} id={id} title={title} content={content} />
           ))}
         </div>
       </section>
@@ -62,7 +63,9 @@ function CreateDocument() {
   );
 }
 
-function Document({ id, title }: { id: string; title: string }) {
+function Document({ id, title, content }: { id: string; title: string; content: Block[] | null }) {
+  const preview = getDocumentPreview(content);
+
   return (
     <Link href={`/document/${id}`} className="group">
       <Card className="h-full min-h-52 border-[#e0e5e0] transition-shadow group-hover:shadow-sm">
@@ -71,8 +74,14 @@ function Document({ id, title }: { id: string; title: string }) {
             <FileText className="size-5" />
           </span>
         </CardHeader>
-        <CardContent className="grow text-[#607067]">
-          <p className="line-clamp-3 leading-6">Lorem ipsum, dol</p>
+        <CardContent className="grow">
+          <div className="min-h-20 rounded-lg border border-[#edf0ed] bg-[#fbfcfa] px-3 py-2.5 text-sm leading-5 text-[#607067]">
+            {preview ? (
+              <p className="line-clamp-3 whitespace-pre-wrap">{preview}</p>
+            ) : (
+              <p className="text-[#8a968e]">No text yet — open to start writing.</p>
+            )}
+          </div>
         </CardContent>
         <CardFooter className="flex flex-col items-start border-[#e0e5e0] bg-[#f7faf7]">
           <CardTitle className="line-clamp-2">{title}</CardTitle>
@@ -81,4 +90,32 @@ function Document({ id, title }: { id: string; title: string }) {
       </Card>
     </Link>
   );
+}
+
+function getDocumentPreview(blocks: Block[] | null): string {
+  return getBlockText(blocks ?? [])
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 240);
+}
+
+function getBlockText(blocks: Block[]): string {
+  return blocks
+    .flatMap((block) => {
+      const inlineText = Array.isArray(block.content)
+        ? block.content
+          .map((inlineContent) => {
+            if (inlineContent.type === "text") return inlineContent.text;
+            if (inlineContent.type === "link") {
+              return inlineContent.content.map((text) => text.text).join("");
+            }
+
+            return "";
+          })
+          .join("")
+        : "";
+
+      return [inlineText, getBlockText(block.children)];
+    })
+    .join(" ");
 }
