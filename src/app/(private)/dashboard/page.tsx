@@ -3,11 +3,12 @@ import {
   CardContent,
   CardDescription,
   CardFooter,
+  CardHeader,
   CardTitle,
 } from "@/components/ui/card";
 import { db } from "@/db";
 import { auth } from "@clerk/nextjs/server";
-import { FilePlusCorner } from "lucide-react";
+import { FilePlusCorner, FileText } from "lucide-react";
 import Link from "next/link";
 
 export const revalidate = 0;
@@ -25,29 +26,36 @@ export default async function DashboardPage() {
   });
 
   return (
-    <div>
-      <h1 className="container mx-auto mb-5 text-2xl font-semibold">
-        My Documents
-      </h1>
-      <div className="flex justify-center">
-        <div className="flex flex-wrap gap-5 container">
+    <div className="container mx-auto max-w-6xl px-5 pb-12 sm:px-8">
+      <div className="flex flex-col gap-2 py-8 sm:py-10">
+        <p className="text-sm font-semibold tracking-[0.12em] text-[#567160] uppercase">Writing space</p>
+        <h1 className="text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">My Documents</h1>
+        <p className="max-w-xl text-[#65716a]">Keep your ideas, drafts, and finished work together in one calm place.</p>
+      </div>
+      <section aria-label="Documents">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <CreateDocument />
           {documents.map(({ id, title }) => (
             <Document key={id} id={id} title={title} />
           ))}
         </div>
-      </div>
+      </section>
     </div>
   );
 }
 
 function CreateDocument() {
   return (
-    <Link href={`/document/new`}>
-      <Card className="h-70 aspect-9/11">
-        <CardContent className="flex flex-col gap-2 items-center justify-center h-full">
-          <FilePlusCorner className="size-14" />
-          New Document
+    <Link href={`/document/new`} className="group">
+      <Card className="h-full min-h-52 border-dashed border-[#bfd0c2] bg-[#f7faf7] transition-shadow group-hover:shadow-sm">
+        <CardContent className="flex h-full min-h-52 flex-col items-center justify-center gap-3 text-center">
+          <span className="grid size-12 place-items-center rounded-full bg-[#e5f1e8] text-[#315943]">
+            <FilePlusCorner className="size-6" />
+          </span>
+          <div>
+            <CardTitle>New document</CardTitle>
+            <CardDescription className="mt-1">Start with a blank page.</CardDescription>
+          </div>
         </CardContent>
       </Card>
     </Link>
@@ -56,14 +64,19 @@ function CreateDocument() {
 
 function Document({ id, title }: { id: string; title: string }) {
   return (
-    <Link href={`/document/${id}`}>
-      <Card className="h-70 aspect-9/11">
-        <CardContent className="grow truncate text-wrap">
-          Lorem ipsum, dol
+    <Link href={`/document/${id}`} className="group">
+      <Card className="h-full min-h-52 border-[#e0e5e0] transition-shadow group-hover:shadow-sm">
+        <CardHeader>
+          <span className="grid size-10 place-items-center rounded-full bg-[#e5f1e8] text-[#315943]">
+            <FileText className="size-5" />
+          </span>
+        </CardHeader>
+        <CardContent className="grow text-[#607067]">
+          <p className="line-clamp-3 leading-6">Lorem ipsum, dol</p>
         </CardContent>
-        <CardFooter className="flex flex-col">
-          <CardTitle>{title}</CardTitle>
-          <CardDescription>Click to edit document</CardDescription>
+        <CardFooter className="flex flex-col items-start border-[#e0e5e0] bg-[#f7faf7]">
+          <CardTitle className="line-clamp-2">{title}</CardTitle>
+          <CardDescription className="mt-1">Click to edit document</CardDescription>
         </CardFooter>
       </Card>
     </Link>
