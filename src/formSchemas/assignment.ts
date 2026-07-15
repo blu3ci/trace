@@ -41,6 +41,7 @@ export const joinAssignmentSchema = yup
     accessCode: yup
       .string()
       .trim()
-      .matches(/^\d{6}$/, "Enter the six-digit assignment code"),
+      .lowercase()
+      .matches(/^(?:[0-9a-f]{8}|\d{6})$/, "Enter a valid assignment code"),
   })
   .required();

@@ -1,0 +1,1 @@
+ALTER TABLE "assignments" ALTER COLUMN "access_code" SET DATA TYPE varchar(8) USING "access_code"::varchar(8);

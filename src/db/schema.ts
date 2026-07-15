@@ -40,7 +40,7 @@ export const assignmentsTable = pgTable(
     course: varchar("course", { length: 120 }),
     description: text("description"),
     dueDate: date("due_date"),
-    accessCode: varchar("access_code", { length: 6 }).notNull(),
+    accessCode: varchar("access_code", { length: 8 }).notNull(),
     createdAt,
     updatedAt,
   },

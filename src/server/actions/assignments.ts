@@ -3,7 +3,7 @@
 import "server-only";
 
 import { auth } from "@clerk/nextjs/server";
-import { randomInt } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { assignmentMembersTable, assignmentsTable } from "@/db/schema";
@@ -20,7 +20,7 @@ export async function createAssignment(
     const { title, course, description, dueDate } = await newAssignmentSchema.validate(unsafeData);
 
     for (let attempt = 0; attempt < 10; attempt += 1) {
-      const accessCode = String(randomInt(100000, 1_000_000));
+      const accessCode = randomUUID().slice(0, 8);
       const created = await db
         .insert(assignmentsTable)
         .values({

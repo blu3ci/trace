@@ -43,12 +43,12 @@ export function JoinAssignmentForm() {
               <FieldLabel htmlFor="assignment-access-code">Assignment code</FieldLabel>
               <Input
                 id="assignment-access-code"
-                inputMode="numeric"
-                maxLength={6}
-                placeholder="123456"
+                autoCapitalize="none"
+                maxLength={8}
+                placeholder="a1b2c3d4"
                 {...field}
                 aria-invalid={fieldState.invalid}
-                onChange={(event) => field.onChange(event.target.value.replace(/\D/g, ""))}
+                onChange={(event) => field.onChange(event.target.value.toLowerCase().replace(/[^0-9a-f]/g, ""))}
               />
               {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
             </Field>
