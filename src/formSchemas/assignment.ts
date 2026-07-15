@@ -45,3 +45,9 @@ export const joinAssignmentSchema = yup
       .matches(/^(?:[0-9a-f]{8}|\d{6})$/, "Enter a valid assignment code"),
   })
   .required();
+
+export const assignmentSubmissionSchema = yup
+  .object({
+    assignmentId: yup.string().uuid().required(),
+  })
+  .required();

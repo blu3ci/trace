@@ -22,5 +22,17 @@ export default async function DocumentPage({
 
   if (!document) return notFound();
 
-  return <Editor title={document.title} documentId={document.id} content={document.content} />;
+  const submission = await db.query.assignmentSubmissionsTable.findFirst({
+    where: { documentId, clerkUserId: userId },
+    columns: { submittedAt: true },
+  });
+
+  return (
+    <Editor
+      title={document.title}
+      documentId={document.id}
+      content={document.content}
+      isSubmitted={submission?.submittedAt != null}
+    />
+  );
 }

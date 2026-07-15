@@ -64,3 +64,29 @@ export const assignmentMembersTable = pgTable(
     index("assignment_members_clerk_user_id_idx").on(t.clerkUserId),
   ],
 );
+
+export const assignmentSubmissionsTable = pgTable(
+  "assignment_submissions",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    assignmentId: uuid("assignment_id")
+      .notNull()
+      .references(() => assignmentsTable.id, { onDelete: "cascade" }),
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => documentsTable.id, { onDelete: "cascade" }),
+    clerkUserId: text("clerk_user_id").notNull(),
+    submittedAt: timestamp("submitted_at"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [
+    uniqueIndex("assignment_submissions_assignment_student_idx").on(
+      t.assignmentId,
+      t.clerkUserId,
+    ),
+    uniqueIndex("assignment_submissions_document_id_idx").on(t.documentId),
+    index("assignment_submissions_assignment_id_idx").on(t.assignmentId),
+    index("assignment_submissions_clerk_user_id_idx").on(t.clerkUserId),
+  ],
+);

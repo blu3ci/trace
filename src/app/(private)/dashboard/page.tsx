@@ -6,10 +6,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { db } from "@/db";
 import { auth } from "@clerk/nextjs/server";
 import { Block } from "@blocknote/core";
-import { FilePlusCorner, FileText } from "lucide-react";
+import { CalendarDays, CheckCircle2, ClipboardList, FilePlusCorner, FileText } from "lucide-react";
 import Link from "next/link";
 
 export const revalidate = 0;
@@ -19,12 +20,31 @@ export default async function DashboardPage() {
 
   if (userId == null) return redirectToSignIn();
 
-  const documents = await db.query.documentsTable.findMany({
-    where: {
-      clerkUserId: userId,
-    },
-    orderBy: ({ updatedAt }, { desc }) => desc(updatedAt),
-  });
+  const [documents, submissions] = await Promise.all([
+    db.query.documentsTable.findMany({
+      where: {
+        clerkUserId: userId,
+      },
+      orderBy: ({ updatedAt }, { desc }) => desc(updatedAt),
+    }),
+    db.query.assignmentSubmissionsTable.findMany({
+      where: { clerkUserId: userId },
+      columns: { documentId: true, submittedAt: true },
+      with: {
+        assignment: {
+          columns: { title: true, dueDate: true },
+        },
+      },
+    }),
+  ]);
+  const assignmentsByDocumentId = new Map(
+    submissions
+      .filter((submission) => submission.assignment != null)
+      .map((submission) => [
+        submission.documentId,
+        { ...submission.assignment!, submittedAt: submission.submittedAt },
+      ]),
+  );
 
   return (
     <div className="container mx-auto max-w-6xl px-5 pb-12 sm:px-8">
@@ -37,7 +57,13 @@ export default async function DashboardPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <CreateDocument />
           {documents.map(({ id, title, content }) => (
-            <Document key={id} id={id} title={title} content={content} />
+            <Document
+              key={id}
+              id={id}
+              title={title}
+              content={content}
+              assignment={assignmentsByDocumentId.get(id)}
+            />
           ))}
         </div>
       </section>
@@ -63,8 +89,25 @@ function CreateDocument() {
   );
 }
 
-function Document({ id, title, content }: { id: string; title: string; content: Block[] | null }) {
+function Document({
+  id,
+  title,
+  content,
+  assignment,
+}: {
+  id: string;
+  title: string;
+  content: Block[] | null;
+  assignment?: { title: string; dueDate: string | null; submittedAt: Date | null };
+}) {
   const preview = getDocumentPreview(content);
+  const submissionStatus = assignment?.submittedAt
+    ? assignment.dueDate && wasSubmittedLate(assignment.submittedAt, assignment.dueDate)
+      ? "Submitted late"
+      : assignment.dueDate
+        ? "Submitted on time"
+        : "Submitted"
+    : null;
 
   return (
     <Link href={`/document/${id}`} className="group">
@@ -85,10 +128,37 @@ function Document({ id, title, content }: { id: string; title: string; content: 
         </CardContent>
         <CardFooter className="flex flex-col items-start border-[#e0e5e0] bg-[#f7faf7]">
           <CardTitle className="line-clamp-2">{title}</CardTitle>
-          <CardDescription className="mt-1">Click to edit document</CardDescription>
+          {assignment ? (
+            <div className="mt-2 flex flex-wrap items-center gap-2">
+              <Badge className="bg-[#e5f1e8] text-[#315943]">
+                <ClipboardList /> Assignment
+              </Badge>
+              {submissionStatus ? (
+                <CardDescription className={submissionStatus === "Submitted late" ? "flex items-center gap-1 text-[#9b332a]" : "flex items-center gap-1 text-[#315943]"}>
+                  <CheckCircle2 className="size-3.5" /> {submissionStatus}
+                </CardDescription>
+              ) : (
+                <CardDescription className="flex items-center gap-1">
+                  <CalendarDays className="size-3.5" /> {assignment.dueDate ? `Due ${formatDate(assignment.dueDate)}` : "No due date"}
+                </CardDescription>
+              )}
+            </div>
+          ) : (
+            <CardDescription className="mt-1">Click to edit document</CardDescription>
+          )}
         </CardFooter>
       </Card>
     </Link>
+  );
+}
+
+function wasSubmittedLate(submittedAt: Date, dueDate: string) {
+  return submittedAt.toISOString().slice(0, 10) > dueDate;
+}
+
+function formatDate(value: string) {
+  return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(
+    new Date(`${value}T00:00:00`),
   );
 }
 

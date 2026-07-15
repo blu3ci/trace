@@ -6,7 +6,7 @@ import "@blocknote/core/fonts/inter.css";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/shadcn";
 import "@blocknote/shadcn/style.css";
-import { ArrowLeft, Download, FileText } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Download, FileText } from "lucide-react";
 import {
   PDFExporter,
   pdfDefaultSchemaMappings,
@@ -24,10 +24,12 @@ export default function Editor({
   title,
   documentId,
   content,
+  isSubmitted,
 }: {
   title: string;
   documentId: string;
   content: Block[] | null;
+  isSubmitted: boolean;
 }) {
   const [isSaving, setIsSaving] = useState(false);
   const editor = useCreateBlockNote({
@@ -37,12 +39,14 @@ export default function Editor({
 
   const debouncedChangeHandler = useMemo(
     () => debounce(async () => {
+      if (isSubmitted) return;
+
       setIsSaving(true);
       const document: Block[] = editor.document;
       await saveDocument(documentId, document);
       setIsSaving(false);
     }, DEBOUNCE_DELAY),
-    [documentId]
+    [documentId, editor, isSubmitted]
   );
 
   useEffect(() => {
@@ -60,15 +64,17 @@ export default function Editor({
         documentId={documentId}
         isSaving={isSaving}
         setIsSaving={setIsSaving}
+        isSubmitted={isSubmitted}
       />
       <div className="h-full overflow-y-auto py-2">
         <div className="max-w-250 min-h-full p-8 shadow-sm mx-auto">
           <BlockNoteView
             editor={editor}
             theme="light"
+            editable={!isSubmitted}
             // formattingToolbar={false}
             onChange={() => {
-              debouncedChangeHandler();
+              if (!isSubmitted) debouncedChangeHandler();
             }}
             sideMenu={false}
             comments={false}
@@ -85,12 +91,14 @@ function DocumentHeader({
   documentId,
   isSaving,
   setIsSaving,
+  isSubmitted,
 }: {
   editor: BlockNoteEditor;
   title: string;
   documentId: string;
   isSaving: boolean;
   setIsSaving: React.Dispatch<React.SetStateAction<boolean>>;
+  isSubmitted: boolean;
 }) {
   const [draftTitle, setDraftTitle] = useState(title);
 
@@ -118,6 +126,8 @@ function DocumentHeader({
   }
 
   async function handleTitleBlur() {
+    if (isSubmitted) return;
+
     const trimmedTitle = draftTitle.trim();
 
     if (!trimmedTitle || trimmedTitle === title) {
@@ -156,23 +166,31 @@ function DocumentHeader({
             <p className="mb-0.5 text-[0.7rem] font-semibold tracking-[0.12em] text-[#567160] uppercase">
               Document
             </p>
-            <Input
-              aria-label="Document title"
-              className="-ml-2 h-8 w-full max-w-xl rounded-lg border-transparent bg-transparent px-2 text-base font-semibold tracking-[-0.02em] shadow-none transition-colors hover:border-[#bfd0c2] hover:bg-white focus-visible:border-[#567160] focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-[#d8e8db]"
-              value={draftTitle}
-              onChange={(event) => setDraftTitle(event.target.value)}
-              onBlur={handleTitleBlur}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  event.currentTarget.blur();
-                }
-              }}
-            />
+            {isSubmitted ? (
+              <p className="px-2 text-base font-semibold tracking-[-0.02em]">{title}</p>
+            ) : (
+              <Input
+                aria-label="Document title"
+                className="-ml-2 h-8 w-full max-w-xl rounded-lg border-transparent bg-transparent px-2 text-base font-semibold tracking-[-0.02em] shadow-none transition-colors hover:border-[#bfd0c2] hover:bg-white focus-visible:border-[#567160] focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-[#d8e8db]"
+                value={draftTitle}
+                onChange={(event) => setDraftTitle(event.target.value)}
+                onBlur={handleTitleBlur}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter") {
+                    event.preventDefault();
+                    event.currentTarget.blur();
+                  }
+                }}
+              />
+            )}
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">
-          {isSaving && (
+          {isSubmitted ? (
+            <span className="hidden items-center gap-1.5 rounded-full bg-[#e5f1e8] px-2.5 py-1 text-xs font-medium text-[#315943] sm:flex">
+              <CheckCircle2 className="size-3.5" /> Submitted
+            </span>
+          ) : isSaving && (
             <span className="hidden items-center gap-1.5 rounded-full bg-[#e5f1e8] px-2.5 py-1 text-xs font-medium text-[#315943] sm:flex">
               <span className="size-1.5 animate-pulse rounded-full bg-[#567160]" />
               Saving

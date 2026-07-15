@@ -1,5 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
-import { CalendarDays, ClipboardList, KeyRound, Tag } from "lucide-react";
+import { CalendarDays, CheckCircle2, ClipboardList, FilePenLine, FilePlus, KeyRound, Tag } from "lucide-react";
 import Link from "next/link";
 import {
   Card,
@@ -9,8 +9,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { db } from "@/db";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  createAssignmentSubmission,
+  submitAssignmentSubmission,
+} from "@/server/actions/documents";
 import { JoinAssignmentForm } from "./join-assignment-form";
 
 export const revalidate = 0;
@@ -27,6 +32,15 @@ export default async function AssignmentsPage() {
       where: { id: { in: assignmentIds } },
       orderBy: ({ dueDate, createdAt }, { asc, desc }) => [asc(dueDate), desc(createdAt)],
     });
+  const submissions = assignmentIds.length === 0
+    ? []
+    : await db.query.assignmentSubmissionsTable.findMany({
+      where: { assignmentId: { in: assignmentIds }, clerkUserId: userId },
+      columns: { assignmentId: true, documentId: true, submittedAt: true },
+    });
+  const submissionsByAssignment = new Map(
+    submissions.map((submission) => [submission.assignmentId, submission]),
+  );
   const today = new Date().toISOString().slice(0, 10);
   const upcomingCount = assignments.filter((assignment) => assignment.dueDate && assignment.dueDate >= today).length;
 
@@ -86,6 +100,7 @@ export default async function AssignmentsPage() {
                 </Card>
               ) : assignments.map((assignment) => {
                 const isOverdue = assignment.dueDate ? assignment.dueDate < today : false;
+                const submission = submissionsByAssignment.get(assignment.id);
                 return (
                   <Card key={assignment.id} className="border-[#e0e5e0] transition-shadow hover:shadow-sm">
                     <CardHeader>
@@ -97,7 +112,33 @@ export default async function AssignmentsPage() {
                         <DueDate dueDate={assignment.dueDate} isOverdue={isOverdue} />
                       </div>
                     </CardHeader>
-                    {assignment.description && <CardContent><p className="whitespace-pre-wrap leading-6 text-[#607067]">{assignment.description}</p></CardContent>}
+                    <CardContent className="flex flex-col gap-4">
+                      {assignment.description && <p className="whitespace-pre-wrap leading-6 text-[#607067]">{assignment.description}</p>}
+                      {submission ? (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Button variant="outline" nativeButton={false} render={<Link href={`/document/${submission.documentId}`} />}>
+                            <FilePenLine className="size-4" /> {submission.submittedAt ? "View submission" : "Continue submission"}
+                          </Button>
+                          {submission.submittedAt ? (
+                            <Badge className="bg-[#e5f1e8] text-[#315943]">
+                              <CheckCircle2 /> Submitted
+                            </Badge>
+                          ) : (
+                            <form action={submitAssignmentSubmission.bind(null, assignment.id)}>
+                              <Button type="submit">
+                                <CheckCircle2 className="size-4" /> Mark as submitted
+                              </Button>
+                            </form>
+                          )}
+                        </div>
+                      ) : (
+                        <form action={createAssignmentSubmission.bind(null, assignment.id)}>
+                          <Button type="submit">
+                            <FilePlus className="size-4" /> Start submission
+                          </Button>
+                        </form>
+                      )}
+                    </CardContent>
                   </Card>
                 );
               })}

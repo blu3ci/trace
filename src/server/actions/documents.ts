@@ -1,18 +1,137 @@
 "use server";
 
 import { db } from "@/db";
-import { documentsTable } from "@/db/schema";
+import {
+  assignmentSubmissionsTable,
+  documentsTable,
+} from "@/db/schema";
 import {
   newDocumentSchema,
   updateDocumentTitleSchema,
 } from "@/formSchemas/document";
 import { auth } from "@clerk/nextjs/server";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, notExists } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import * as yup from "yup";
 import "server-only";
 import { Block } from "@blocknote/core";
+import { assignmentSubmissionSchema } from "@/formSchemas/assignment";
+import { randomUUID } from "node:crypto";
+
+function isEditableDocument(documentId: string) {
+  return notExists(
+    db
+      .select({ id: assignmentSubmissionsTable.id })
+      .from(assignmentSubmissionsTable)
+      .where(
+        and(
+          eq(assignmentSubmissionsTable.documentId, documentId),
+          isNotNull(assignmentSubmissionsTable.submittedAt),
+        ),
+      ),
+  );
+}
+
+export async function createAssignmentSubmission(
+  unsafeAssignmentId: string,
+): Promise<void> {
+  const { userId } = await auth();
+  if (!userId) return;
+
+  let assignmentId: string;
+  try {
+    ({ assignmentId } = await assignmentSubmissionSchema.validate({
+      assignmentId: unsafeAssignmentId,
+    }));
+  } catch {
+    return;
+  }
+
+  const [membership, existingSubmission, assignment] = await Promise.all([
+    db.query.assignmentMembersTable.findFirst({
+      where: { assignmentId, clerkUserId: userId },
+      columns: { assignmentId: true },
+    }),
+    db.query.assignmentSubmissionsTable.findFirst({
+      where: { assignmentId, clerkUserId: userId },
+      columns: { documentId: true },
+    }),
+    db.query.assignmentsTable.findFirst({
+      where: { id: assignmentId },
+      columns: { title: true },
+    }),
+  ]);
+
+  if (!membership || !assignment) return;
+  if (existingSubmission) redirect(`/document/${existingSubmission.documentId}`);
+
+  const documentId = randomUUID();
+
+  try {
+    await db.batch([
+      db.insert(documentsTable).values({
+        id: documentId,
+        clerkUserId: userId,
+        title: `${assignment.title} submission`.slice(0, 255),
+      }),
+      db.insert(assignmentSubmissionsTable).values({
+        assignmentId,
+        documentId,
+        clerkUserId: userId,
+      }),
+    ]);
+  } catch {
+    const concurrentSubmission = await db.query.assignmentSubmissionsTable.findFirst({
+      where: { assignmentId, clerkUserId: userId },
+      columns: { documentId: true },
+    });
+
+    if (concurrentSubmission) redirect(`/document/${concurrentSubmission.documentId}`);
+    return;
+  }
+
+  revalidatePath("/dashboard/assignments");
+  revalidatePath("/dashboard/assignments/instructor");
+  redirect(`/document/${documentId}`);
+}
+
+export async function submitAssignmentSubmission(
+  unsafeAssignmentId: string,
+): Promise<void> {
+  const { userId } = await auth();
+  if (!userId) return;
+
+  let assignmentId: string;
+  try {
+    ({ assignmentId } = await assignmentSubmissionSchema.validate({
+      assignmentId: unsafeAssignmentId,
+    }));
+  } catch {
+    return;
+  }
+
+  const membership = await db.query.assignmentMembersTable.findFirst({
+    where: { assignmentId, clerkUserId: userId },
+    columns: { assignmentId: true },
+  });
+
+  if (!membership) return;
+
+  await db
+    .update(assignmentSubmissionsTable)
+    .set({ submittedAt: new Date() })
+    .where(
+      and(
+        eq(assignmentSubmissionsTable.assignmentId, assignmentId),
+        eq(assignmentSubmissionsTable.clerkUserId, userId),
+        isNull(assignmentSubmissionsTable.submittedAt),
+      ),
+    );
+
+  revalidatePath("/dashboard/assignments");
+  revalidatePath("/dashboard/assignments/instructor");
+}
 
 export async function createDocument(
   unsafeData: yup.InferType<typeof newDocumentSchema>,
@@ -48,15 +167,18 @@ export async function updateDocumentTitle(
   try {
     const { title } = await updateDocumentTitleSchema.validate(unsafeData);
 
-    await db
+    const { rowCount } = await db
       .update(documentsTable)
       .set({ title })
       .where(
         and(
           eq(documentsTable.id, documentId),
           eq(documentsTable.clerkUserId, userId),
+          isEditableDocument(documentId),
         ),
       );
+
+    if (rowCount === 0) return { error: true };
   } catch {
     return { error: true };
   }
@@ -79,6 +201,7 @@ export async function saveDocument(documentId: string, jsonBlocks: Block[]) {
       and(
         eq(documentsTable.id, documentId),
         eq(documentsTable.clerkUserId, userId),
+        isEditableDocument(documentId),
       ),
     );
 
