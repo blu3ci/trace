@@ -4,6 +4,7 @@ import {
   uuid,
   text,
   timestamp,
+  date,
   json,
   index,
   varchar,
@@ -26,4 +27,19 @@ export const documentsTable = pgTable(
     updatedAt,
   },
   (t) => [index("clerk_user_id_idx").on(t.clerkUserId)],
+);
+
+export const assignmentsTable = pgTable(
+  "assignments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    clerkUserId: text("clerk_user_id").notNull(),
+    title: varchar("title", { length: 255 }).notNull(),
+    course: varchar("course", { length: 120 }),
+    description: text("description"),
+    dueDate: date("due_date"),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [index("assignments_clerk_user_id_idx").on(t.clerkUserId)],
 );
