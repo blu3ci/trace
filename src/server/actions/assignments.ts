@@ -36,6 +36,7 @@ export async function createAssignment(
 
       if (created.length > 0) {
         revalidatePath("/dashboard/assignments");
+        revalidatePath("/dashboard/assignments/instructor");
         return { error: false };
       }
     }
@@ -72,5 +73,6 @@ export async function joinAssignment(
   }
 
   revalidatePath("/dashboard/assignments");
+  revalidatePath("/dashboard/assignments/instructor");
   return { error: false };
 }

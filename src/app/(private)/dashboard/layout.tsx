@@ -31,6 +31,13 @@ export default function DashboardLayout({
             >
               My Assignments
             </Button>
+            <Button
+              variant={"link"}
+              nativeButton={false}
+              render={<Link href={"/dashboard/assignments/instructor"} />}
+            >
+              Instructor Assignments
+            </Button>
           </div>
 
           <UserButton />
