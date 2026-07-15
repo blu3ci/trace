@@ -6,7 +6,7 @@ import "@blocknote/core/fonts/inter.css";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/shadcn";
 import "@blocknote/shadcn/style.css";
-import { Download, FileText } from "lucide-react";
+import { ArrowLeft, Download, FileText } from "lucide-react";
 import {
   PDFExporter,
   pdfDefaultSchemaMappings,
@@ -137,18 +137,28 @@ function DocumentHeader({
   }
 
   return (
-    <div className="z-1 w-full bg-muted py-2">
-      <div className="container mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Link href="/dashboard">
-            <div className="p-3 rounded-lg bg-[#315943] text-white">
-              <FileText className="size-4" />
-            </div>
-          </Link>
-          <div className="min-w-0 flex-1">
+    <header className="z-20 w-full border-b border-[#dbe3dc] bg-[#fbfcfa]/95 backdrop-blur-xl">
+      <div className="container mx-auto flex min-h-18 items-center justify-between gap-3 px-5 py-3 sm:px-8">
+        <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+          <Button
+            aria-label="Back to my documents"
+            variant="outline"
+            size="icon-lg"
+            nativeButton={false}
+            render={<Link href="/dashboard" />}
+          >
+            <ArrowLeft className="size-4" />
+          </Button>
+          <span className="grid size-9 shrink-0 place-items-center rounded-xl bg-[#315943] text-white">
+            <FileText className="size-4" />
+          </span>
+          <div className="min-w-0">
+            <p className="mb-0.5 text-[0.7rem] font-semibold tracking-[0.12em] text-[#567160] uppercase">
+              Document
+            </p>
             <Input
               aria-label="Document title"
-              className="w-full max-w-xl rounded-lg border-transparent hover:border-input"
+              className="-ml-2 h-8 w-full max-w-xl rounded-lg border-transparent bg-transparent px-2 text-base font-semibold tracking-[-0.02em] shadow-none transition-colors hover:border-[#bfd0c2] hover:bg-white focus-visible:border-[#567160] focus-visible:bg-white focus-visible:ring-2 focus-visible:ring-[#d8e8db]"
               value={draftTitle}
               onChange={(event) => setDraftTitle(event.target.value)}
               onBlur={handleTitleBlur}
@@ -161,15 +171,20 @@ function DocumentHeader({
             />
           </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex shrink-0 items-center gap-2 sm:gap-3">
           {isSaving && (
-            <span className="text-xs text-muted-foreground">Saving…</span>
+            <span className="hidden items-center gap-1.5 rounded-full bg-[#e5f1e8] px-2.5 py-1 text-xs font-medium text-[#315943] sm:flex">
+              <span className="size-1.5 animate-pulse rounded-full bg-[#567160]" />
+              Saving
+            </span>
           )}
-          <Button onClick={exportPDF}>
-            <Download /> Export PDF
+          <Button variant="outline" onClick={exportPDF}>
+            <Download />
+            <span className="hidden sm:inline">Export PDF</span>
+            <span className="sr-only sm:hidden">Export PDF</span>
           </Button>
         </div>
       </div>
-    </div>
+    </header>
   );
 }
