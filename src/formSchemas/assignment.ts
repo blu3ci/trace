@@ -35,3 +35,12 @@ export const newAssignmentSchema = yup
       .max(2000, "Notes must be at most 2000 characters"),
   })
   .required();
+
+export const joinAssignmentSchema = yup
+  .object({
+    accessCode: yup
+      .string()
+      .trim()
+      .matches(/^\d{6}$/, "Enter the six-digit assignment code"),
+  })
+  .required();

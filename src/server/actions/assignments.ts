@@ -3,10 +3,11 @@
 import "server-only";
 
 import { auth } from "@clerk/nextjs/server";
+import { randomInt } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { db } from "@/db";
-import { assignmentsTable } from "@/db/schema";
-import { newAssignmentSchema } from "@/formSchemas/assignment";
+import { assignmentMembersTable, assignmentsTable } from "@/db/schema";
+import { joinAssignmentSchema, newAssignmentSchema } from "@/formSchemas/assignment";
 import * as yup from "yup";
 
 export async function createAssignment(
@@ -18,13 +19,54 @@ export async function createAssignment(
   try {
     const { title, course, description, dueDate } = await newAssignmentSchema.validate(unsafeData);
 
-    await db.insert(assignmentsTable).values({
-      clerkUserId: userId,
-      title,
-      course: course || null,
-      description: description || null,
-      dueDate: dueDate || null,
+    for (let attempt = 0; attempt < 10; attempt += 1) {
+      const accessCode = String(randomInt(100000, 1_000_000));
+      const created = await db
+        .insert(assignmentsTable)
+        .values({
+          clerkUserId: userId,
+          title,
+          course: course || null,
+          description: description || null,
+          dueDate: dueDate || null,
+          accessCode,
+        })
+        .onConflictDoNothing({ target: assignmentsTable.accessCode })
+        .returning({ id: assignmentsTable.id });
+
+      if (created.length > 0) {
+        revalidatePath("/dashboard/assignments");
+        return { error: false };
+      }
+    }
+  } catch {
+    return { error: true };
+  }
+
+  return { error: true };
+}
+
+export async function joinAssignment(
+  unsafeData: yup.InferType<typeof joinAssignmentSchema>,
+): Promise<{ error: boolean }> {
+  const { userId } = await auth();
+  if (!userId) return { error: true };
+
+  try {
+    const { accessCode } = await joinAssignmentSchema.validate(unsafeData);
+    if (!accessCode) return { error: true };
+
+    const assignment = await db.query.assignmentsTable.findFirst({
+      where: { accessCode },
+      columns: { id: true, clerkUserId: true },
     });
+
+    if (!assignment || assignment.clerkUserId === userId) return { error: true };
+
+    await db
+      .insert(assignmentMembersTable)
+      .values({ assignmentId: assignment.id, clerkUserId: userId })
+      .onConflictDoNothing();
   } catch {
     return { error: true };
   }

@@ -7,6 +7,8 @@ import {
   date,
   json,
   index,
+  primaryKey,
+  uniqueIndex,
   varchar,
 } from "drizzle-orm/pg-core";
 
@@ -38,8 +40,27 @@ export const assignmentsTable = pgTable(
     course: varchar("course", { length: 120 }),
     description: text("description"),
     dueDate: date("due_date"),
+    accessCode: varchar("access_code", { length: 6 }).notNull(),
     createdAt,
     updatedAt,
   },
-  (t) => [index("assignments_clerk_user_id_idx").on(t.clerkUserId)],
+  (t) => [
+    index("assignments_clerk_user_id_idx").on(t.clerkUserId),
+    uniqueIndex("assignments_access_code_idx").on(t.accessCode),
+  ],
+);
+
+export const assignmentMembersTable = pgTable(
+  "assignment_members",
+  {
+    assignmentId: uuid("assignment_id")
+      .notNull()
+      .references(() => assignmentsTable.id, { onDelete: "cascade" }),
+    clerkUserId: text("clerk_user_id").notNull(),
+    createdAt,
+  },
+  (t) => [
+    primaryKey({ columns: [t.assignmentId, t.clerkUserId] }),
+    index("assignment_members_clerk_user_id_idx").on(t.clerkUserId),
+  ],
 );
