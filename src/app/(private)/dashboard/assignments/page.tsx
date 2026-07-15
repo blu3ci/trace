@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { CalendarDays, ClipboardList, KeyRound, Plus, Tag, UsersRound } from "lucide-react";
 import {
   Card,
@@ -7,6 +7,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { db } from "@/db";
 import { AssignmentForm } from "./assignment-form";
 import { JoinAssignmentForm } from "./join-assignment-form";
@@ -21,6 +22,7 @@ export default async function AssignmentsPage() {
     db.query.assignmentsTable.findMany({
       where: { clerkUserId: userId },
       orderBy: ({ dueDate, createdAt }, { asc, desc }) => [asc(dueDate), desc(createdAt)],
+      with: { members: true },
     }),
     db.query.assignmentMembersTable.findMany({ where: { clerkUserId: userId } }),
   ]);
@@ -30,24 +32,25 @@ export default async function AssignmentsPage() {
     : await db.query.assignmentsTable.findMany({
       where: { id: { in: enrolledAssignmentIds } },
     });
-  const ownedAssignmentIds = ownedAssignments.map((assignment) => assignment.id);
-  const assignmentMembers = ownedAssignmentIds.length === 0
+  const assignmentMembers = ownedAssignments.flatMap((assignment) => assignment.members);
+  const rosterUserIds = [...new Set(assignmentMembers.map((member) => member.clerkUserId))];
+  const rosterUsers = rosterUserIds.length === 0
     ? []
-    : await db.query.assignmentMembersTable.findMany({
-      where: { assignmentId: { in: ownedAssignmentIds } },
-    });
+    : await getRosterUsers(rosterUserIds);
+  const rosterProfiles = new Map(rosterUsers.map((user) => [user.id, {
+    name: formatUserName(user),
+    email: user.emailAddresses.find((email) => email.id === user.primaryEmailAddressId)?.emailAddress,
+    imageUrl: user.imageUrl,
+  }]));
   const assignments = [...new Map(
     [...ownedAssignments, ...enrolledAssignments].map((assignment) => [assignment.id, assignment]),
   ).values()].sort((first, second) => {
     const dueDateOrder = (first.dueDate ?? "9999-12-31").localeCompare(second.dueDate ?? "9999-12-31");
     return dueDateOrder || second.createdAt.getTime() - first.createdAt.getTime();
   });
-  const membersByAssignment = new Map<string, typeof assignmentMembers>();
-  for (const member of assignmentMembers) {
-    const members = membersByAssignment.get(member.assignmentId) ?? [];
-    members.push(member);
-    membersByAssignment.set(member.assignmentId, members);
-  }
+  const membersByAssignment = new Map(
+    ownedAssignments.map((assignment) => [assignment.id, assignment.members]),
+  );
   const today = new Date().toISOString().slice(0, 10);
   const upcomingCount = assignments.filter((assignment) => assignment.dueDate && assignment.dueDate >= today).length;
 
@@ -143,8 +146,24 @@ export default async function AssignmentsPage() {
                               {members.length === 0 ? (
                                 <p className="mt-1">No students have joined yet.</p>
                               ) : (
-                                <ul className="mt-1 break-all">
-                                  {members.map((member) => <li key={member.clerkUserId}>{member.clerkUserId}</li>)}
+                                <ul className="mt-2 flex flex-col gap-2">
+                                  {members.map((member) => {
+                                    const profile = rosterProfiles.get(member.clerkUserId);
+                                    const name = profile?.name ?? "Student";
+
+                                    return (
+                                      <li key={member.clerkUserId} className="flex items-center gap-2">
+                                        <Avatar size="sm">
+                                          {profile?.imageUrl && <AvatarImage src={profile.imageUrl} alt="" />}
+                                          <AvatarFallback>{getInitials(name)}</AvatarFallback>
+                                        </Avatar>
+                                        <div className="min-w-0">
+                                          <p className="truncate font-medium text-foreground">{name}</p>
+                                          {profile?.email && <p className="truncate text-xs text-muted-foreground">{profile.email}</p>}
+                                        </div>
+                                      </li>
+                                    );
+                                  })}
                                 </ul>
                               )}
                             </div>
@@ -165,4 +184,39 @@ export default async function AssignmentsPage() {
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en", { month: "short", day: "numeric" }).format(new Date(`${value}T00:00:00`));
+}
+
+function chunk<T>(items: T[], size: number) {
+  return Array.from({ length: Math.ceil(items.length / size) }, (_, index) => items.slice(index * size, (index + 1) * size));
+}
+
+function formatUserName(user: {
+  firstName: string | null;
+  lastName: string | null;
+  username: string | null;
+  emailAddresses: Array<{ emailAddress: string }>;
+}) {
+  const fullName = [user.firstName, user.lastName].filter(Boolean).join(" ");
+  return fullName || user.username || user.emailAddresses[0]?.emailAddress || "Student";
+}
+
+function getInitials(name: string) {
+  return name
+    .split(/\s+/)
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+async function getRosterUsers(userIds: string[]) {
+  const client = await clerkClient();
+  const responses = await Promise.all(
+    chunk(userIds, 100).map((ids) => client.users.getUserList({
+      userId: ids,
+      limit: ids.length,
+    })),
+  );
+
+  return responses.flatMap((response) => response.data);
 }

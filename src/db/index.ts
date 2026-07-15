@@ -1,7 +1,6 @@
 import { neon } from "@neondatabase/serverless";
-import { defineRelations } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/neon-http";
-import * as schema from "./schema";
+import { relations } from "./relations";
 
 // `DATABSE_URL` was used by an early local environment template. Keep the
 // fallback while developers migrate to the correctly named `DATABASE_URL`.
@@ -14,4 +13,4 @@ if (!databaseUrl) {
 }
 
 const sql = neon(databaseUrl);
-export const db = drizzle({ client: sql, relations: defineRelations(schema) });
+export const db = drizzle({ client: sql, relations });
