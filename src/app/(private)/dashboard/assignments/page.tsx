@@ -1,6 +1,5 @@
 import { auth } from "@clerk/nextjs/server";
 import { CalendarDays, ClipboardList, Plus, Tag } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -8,10 +7,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { db } from "@/db";
-import { createAssignment } from "@/server/actions/assignments";
+import { AssignmentForm } from "./assignment-form";
 
 export const revalidate = 0;
 
@@ -44,27 +41,7 @@ export default async function AssignmentsPage() {
             <CardDescription>Add the work you want to keep visible in Trace.</CardDescription>
           </CardHeader>
           <CardContent>
-            <form action={createAssignment} className="space-y-4">
-              <label className="block space-y-1.5 text-sm font-medium">
-                Assignment title
-                <Input name="title" required maxLength={255} placeholder="e.g. Civil Rights essay" />
-              </label>
-              <label className="block space-y-1.5 text-sm font-medium">
-                Course <span className="font-normal text-muted-foreground">(optional)</span>
-                <Input name="course" maxLength={120} placeholder="e.g. U.S. History" />
-              </label>
-              <label className="block space-y-1.5 text-sm font-medium">
-                Due date <span className="font-normal text-muted-foreground">(optional)</span>
-                <Input name="dueDate" type="date" />
-              </label>
-              <label className="block space-y-1.5 text-sm font-medium">
-                Notes <span className="font-normal text-muted-foreground">(optional)</span>
-                <Textarea name="description" maxLength={2000} placeholder="What does this assignment ask for?" />
-              </label>
-              <Button type="submit" className="w-full bg-[#315943] hover:bg-[#254735]">
-                Add assignment <Plus data-icon="inline-end" />
-              </Button>
-            </form>
+            <AssignmentForm />
           </CardContent>
         </Card>
 
