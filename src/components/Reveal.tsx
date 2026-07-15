@@ -8,18 +8,41 @@ export function Reveal({
   className,
   delay = 0,
   animationClassName = "slide-in-from-bottom-6",
+  triggerOnMount = false,
 }: {
   children: ReactNode;
   className?: string;
   delay?: number;
   animationClassName?: string;
+  triggerOnMount?: boolean;
 }) {
   const elementRef = useRef<HTMLDivElement>(null);
   const [hasEntered, setHasEntered] = useState(false);
 
   useEffect(() => {
+    if (triggerOnMount) {
+      let animationFrame = requestAnimationFrame(() => {
+        animationFrame = requestAnimationFrame(() => setHasEntered(true));
+      });
+      const fallbackTimer = window.setTimeout(() => setHasEntered(true), 120);
+
+      return () => {
+        cancelAnimationFrame(animationFrame);
+        window.clearTimeout(fallbackTimer);
+      };
+    }
+
     const element = elementRef.current;
     if (!element) return;
+
+    const revealIfVisible = () => {
+      const { bottom, top } = element.getBoundingClientRect();
+      const isVisible = top < window.innerHeight * 0.92 && bottom > 0;
+
+      if (!isVisible) return;
+
+      setHasEntered(true);
+    };
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -32,8 +55,15 @@ export function Reveal({
     );
 
     observer.observe(element);
-    return () => observer.disconnect();
-  }, []);
+    const animationFrame = requestAnimationFrame(revealIfVisible);
+    const fallbackTimer = window.setTimeout(revealIfVisible, 180);
+
+    return () => {
+      observer.disconnect();
+      cancelAnimationFrame(animationFrame);
+      window.clearTimeout(fallbackTimer);
+    };
+  }, [triggerOnMount]);
 
   return (
     <div

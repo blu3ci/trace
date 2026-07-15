@@ -31,21 +31,18 @@ const phases = [
     title: "Find the argument",
     text: "A broad opening becomes three possible claims. The student settles on a question worth pursuing.",
     color: "bg-[#e7dbc0]",
-    animation: "delay-500",
   },
   {
     time: "25—60 min",
     title: "Follow the evidence",
     text: "A weaker point is removed as primary-source evidence reshapes the second section.",
     color: "bg-[#cddfd4]",
-    animation: "delay-700",
   },
   {
     time: "60—80 min",
     title: "Refine the thesis",
     text: "The introduction returns with a more specific, evidence-led position.",
     color: "bg-[#d9d4e7]",
-    animation: "delay-1000",
   },
 ];
 
@@ -93,43 +90,55 @@ export default async function Home() {
         <div className="absolute bottom-12 left-[-7rem] -z-0 size-56 rounded-full bg-[#eee8d8] blur-3xl motion-safe:animate-float-delayed" />
         <div className="relative grid items-center gap-14 lg:grid-cols-[0.94fr_1.06fr] lg:gap-16">
           <div className="max-w-2xl">
-            <Badge
-              variant="outline"
-              className="animate-in fade-in slide-in-from-bottom-2 border-[#c8d4cb] bg-[#f4f7f2] px-2.5 text-[#42614e] duration-500 fill-mode-both motion-reduce:animate-none"
-            >
-              <Sparkles data-icon="inline-start" /> The academic memory layer
-            </Badge>
-            <h1 className="animate-in fade-in slide-in-from-bottom-4 mt-6 text-5xl leading-[0.98] font-semibold tracking-[-0.065em] text-[#1d2521] duration-700 delay-150 fill-mode-both motion-reduce:animate-none sm:text-6xl lg:text-7xl">
-              The work behind the work deserves to be seen.
-            </h1>
-            <p className="animate-in fade-in slide-in-from-bottom-4 mt-6 max-w-xl text-lg leading-8 text-[#607067] duration-700 delay-300 fill-mode-both motion-reduce:animate-none sm:text-xl">
-              Trace turns a student&apos;s writing process into a clear, human
-              proof of learning—without turning the classroom into a
-              surveillance system.
-            </p>
-            <div className="animate-in fade-in slide-in-from-bottom-4 mt-9 flex flex-wrap items-center gap-3 duration-700 delay-500 fill-mode-both motion-reduce:animate-none">
-              <Button
-                size="lg"
-                className="h-11 rounded-xl bg-[#315943] px-5 text-sm hover:bg-[#254735]"
-                nativeButton={false}
-                render={<Link href="/dashboard" />}
+            <Reveal triggerOnMount animationClassName="slide-in-from-bottom-2">
+              <Badge
+                variant="outline"
+                className="border-[#c8d4cb] bg-[#f4f7f2] px-2.5 text-[#42614e]"
               >
-                Start a writing session <ArrowRight data-icon="inline-end" />
-              </Button>
-              <a
-                href="#how-it-works"
-                className="inline-flex h-11 items-center justify-center rounded-xl px-4 text-sm font-medium text-[#405049] transition-colors hover:bg-[#eff2ec]"
-              >
-                See the learning journey
-              </a>
-            </div>
-            <p className="animate-in fade-in mt-5 flex items-center gap-2 text-sm text-[#7a867e] duration-500 delay-700 fill-mode-both motion-reduce:animate-none">
-              <LockKeyhole className="size-3.5" /> Built for thinking, not
-              policing.
-            </p>
+                <Sparkles data-icon="inline-start" /> The academic memory layer
+              </Badge>
+            </Reveal>
+            <Reveal triggerOnMount delay={150} animationClassName="slide-in-from-bottom-4">
+              <h1 className="mt-6 text-5xl leading-[0.98] font-semibold tracking-[-0.065em] text-[#1d2521] sm:text-6xl lg:text-7xl">
+                The work behind the work deserves to be seen.
+              </h1>
+            </Reveal>
+            <Reveal triggerOnMount delay={300} animationClassName="slide-in-from-bottom-4">
+              <p className="mt-6 max-w-xl text-lg leading-8 text-[#607067] sm:text-xl">
+                Trace turns a student&apos;s writing process into a clear, human
+                proof of learning—without turning the classroom into a
+                surveillance system.
+              </p>
+            </Reveal>
+            <Reveal triggerOnMount delay={500} animationClassName="slide-in-from-bottom-4">
+              <div className="mt-9 flex flex-wrap items-center gap-3">
+                <Button
+                  size="lg"
+                  className="h-11 rounded-xl bg-[#315943] px-5 text-sm hover:bg-[#254735]"
+                  nativeButton={false}
+                  render={<Link href="/dashboard" />}
+                >
+                  Start a writing session <ArrowRight data-icon="inline-end" />
+                </Button>
+                <a
+                  href="#how-it-works"
+                  className="inline-flex h-11 items-center justify-center rounded-xl px-4 text-sm font-medium text-[#405049] transition-colors hover:bg-[#eff2ec]"
+                >
+                  See the learning journey
+                </a>
+              </div>
+            </Reveal>
+            <Reveal triggerOnMount delay={700} animationClassName="slide-in-from-bottom-2">
+              <p className="mt-5 flex items-center gap-2 text-sm text-[#7a867e]">
+                <LockKeyhole className="size-3.5" /> Built for thinking, not
+                policing.
+              </p>
+            </Reveal>
           </div>
 
-          <LearningTimeline />
+          <Reveal triggerOnMount delay={300} animationClassName="slide-in-from-right-8">
+            <LearningTimeline />
+          </Reveal>
         </div>
       </section>
 
@@ -331,7 +340,7 @@ function FeatureCard({
 
 function LearningTimeline() {
   return (
-    <Card className="animate-in fade-in slide-in-from-right-8 relative border border-[#d9dfd8] bg-[#fffefb] py-0 shadow-xl shadow-[#49604f]/10 duration-700 delay-300 fill-mode-both motion-reduce:animate-none">
+    <Card className="relative border border-[#d9dfd8] bg-[#fffefb] py-0 shadow-xl shadow-[#49604f]/10">
       <CardHeader className="border-b border-[#e8e9e4] px-5 py-4 sm:px-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -349,30 +358,34 @@ function LearningTimeline() {
         </p>
         <div className="mt-6 space-y-1">
           {phases.map((phase, index) => (
-            <div
+            <Reveal
               key={phase.title}
-              className={`animate-in fade-in slide-in-from-bottom-2 grid grid-cols-[22px_1fr] gap-3 duration-500 fill-mode-both motion-reduce:animate-none ${phase.animation}`}
+              triggerOnMount
+              delay={index * 180 + 520}
+              animationClassName="slide-in-from-bottom-2"
             >
-              <div className="flex flex-col items-center">
-                <span
-                  className={`mt-1.5 size-3 rounded-full ring-4 ring-[#fffefb] ${phase.color}`}
-                />
-                {index < phases.length - 1 && (
-                  <span className="mt-1 h-full min-h-12 w-px bg-[#dde3dd]" />
-                )}
+              <div className="grid grid-cols-[22px_1fr] gap-3">
+                <div className="flex flex-col items-center">
+                  <span
+                    className={`mt-1.5 size-3 rounded-full ring-4 ring-[#fffefb] ${phase.color}`}
+                  />
+                  {index < phases.length - 1 && (
+                    <span className="mt-1 h-full min-h-12 w-px bg-[#dde3dd]" />
+                  )}
+                </div>
+                <div className="pb-5">
+                  <p className="font-mono text-[11px] text-[#829088]">
+                    {phase.time}
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-[#2e3933]">
+                    {phase.title}
+                  </p>
+                  <p className="mt-1 text-sm leading-5 text-[#6c786f]">
+                    {phase.text}
+                  </p>
+                </div>
               </div>
-              <div className="pb-5">
-                <p className="font-mono text-[11px] text-[#829088]">
-                  {phase.time}
-                </p>
-                <p className="mt-1 text-sm font-semibold text-[#2e3933]">
-                  {phase.title}
-                </p>
-                <p className="mt-1 text-sm leading-5 text-[#6c786f]">
-                  {phase.text}
-                </p>
-              </div>
-            </div>
+            </Reveal>
           ))}
         </div>
         <div className="flex items-center justify-between border-t border-[#e8e9e4] pt-4">
