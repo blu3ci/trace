@@ -6,6 +6,7 @@ import {
   timestamp,
   date,
   json,
+  integer,
   index,
   primaryKey,
   uniqueIndex,
@@ -88,5 +89,44 @@ export const assignmentSubmissionsTable = pgTable(
     uniqueIndex("assignment_submissions_document_id_idx").on(t.documentId),
     index("assignment_submissions_assignment_id_idx").on(t.assignmentId),
     index("assignment_submissions_clerk_user_id_idx").on(t.clerkUserId),
+  ],
+);
+
+export const documentMilestonesTable = pgTable(
+  "document_milestones",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => documentsTable.id, { onDelete: "cascade" }),
+    content: json("content").$type<Block[]>(),
+    wordCount: integer("word_count").notNull(),
+    blockCount: integer("block_count").notNull(),
+    activeSeconds: integer("active_seconds").notNull().default(0),
+    createdAt,
+  },
+  (t) => [index("document_milestones_document_id_created_at_idx").on(t.documentId, t.createdAt)],
+);
+
+export const assignmentReceiptsTable = pgTable(
+  "assignment_receipts",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    submissionId: uuid("submission_id")
+      .notNull()
+      .references(() => assignmentSubmissionsTable.id, { onDelete: "cascade" }),
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => documentsTable.id, { onDelete: "cascade" }),
+    finalContent: json("final_content").$type<Block[]>().notNull(),
+    finalWordCount: integer("final_word_count").notNull(),
+    revisionCount: integer("revision_count").notNull(),
+    activeSeconds: integer("active_seconds").notNull().default(0),
+    submittedAt: timestamp("submitted_at").notNull(),
+    createdAt,
+  },
+  (t) => [
+    uniqueIndex("assignment_receipts_submission_id_idx").on(t.submissionId),
+    uniqueIndex("assignment_receipts_document_id_idx").on(t.documentId),
   ],
 );

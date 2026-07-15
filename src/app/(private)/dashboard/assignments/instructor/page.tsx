@@ -18,7 +18,7 @@ export default async function InstructorAssignmentsPage() {
   const assignments = await db.query.assignmentsTable.findMany({
     where: { clerkUserId: userId },
     orderBy: ({ dueDate, createdAt }, { asc, desc }) => [asc(dueDate), desc(createdAt)],
-    with: { members: true },
+    with: { members: true, submissions: { with: { receipt: { columns: { id: true } } } } },
   });
   const studentIds = [...new Set(assignments.flatMap((assignment) => assignment.members.map((member) => member.clerkUserId)))];
   const students = studentIds.length === 0 ? [] : await getUsers(studentIds);
@@ -30,7 +30,7 @@ export default async function InstructorAssignmentsPage() {
   const today = new Date().toISOString().slice(0, 10);
 
   return (
-    <div className="container mx-auto flex max-w-6xl flex-col px-5 sm:px-8 lg:h-[calc(100dvh-5rem)] lg:overflow-hidden">
+    <div className="container mx-auto flex max-w-6xl flex-col px-5 sm:px-8">
       <div className="shrink-0 flex flex-col gap-3 py-8 sm:py-10">
         <p className="text-sm font-semibold tracking-[0.12em] text-[#567160] uppercase">Teaching space</p>
         <h1 className="text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">Instructor Assignments</h1>
@@ -65,6 +65,7 @@ export default async function InstructorAssignmentsPage() {
                 {assignment.description && <p className="whitespace-pre-wrap leading-6 text-[#607067]">{assignment.description}</p>}
                 <div className="rounded-lg border border-[#dbe3dc] bg-[#f7faf7] p-3"><div className="flex items-center gap-2 text-sm font-medium text-[#315943]"><KeyRound className="size-4" /> Assignment code: <span className="font-mono tracking-widest">{assignment.accessCode}</span></div>
                   <div className="mt-3 flex items-start gap-2 text-sm text-[#607067]"><UsersRound className="mt-0.5 size-4 shrink-0" /><div><p className="font-medium text-foreground">Assigned students ({assignment.members.length})</p>{assignment.members.length === 0 ? <p className="mt-1">No students have joined yet.</p> : <ul className="mt-2 flex flex-col gap-2">{assignment.members.map((member) => { const profile = profiles.get(member.clerkUserId); const name = profile?.name ?? "Student"; return <li key={member.clerkUserId} className="flex items-center gap-2"><Avatar size="sm">{profile?.imageUrl && <AvatarImage src={profile.imageUrl} alt="" />}<AvatarFallback>{initials(name)}</AvatarFallback></Avatar><div className="min-w-0"><p className="truncate font-medium text-foreground">{name}</p>{profile?.email && <p className="truncate text-xs text-muted-foreground">{profile.email}</p>}</div></li>; })}</ul>}</div></div>
+                  <div className="mt-4 border-t border-[#dbe3dc] pt-3"><p className="text-sm font-medium text-foreground">Submitted receipts ({assignment.submissions.filter((submission) => submission.receipt).length})</p>{assignment.submissions.filter((submission) => submission.receipt).length === 0 ? <p className="mt-1 text-sm text-[#607067]">No submitted receipts yet.</p> : <ul className="mt-2 flex flex-col gap-2">{assignment.submissions.filter((submission) => submission.receipt).map((submission) => { const profile = profiles.get(submission.clerkUserId); const name = profile?.name ?? "Student"; return <li key={submission.id} className="flex items-center justify-between gap-3"><span className="truncate text-sm text-[#405049]">{name}</span><Button size="sm" variant="outline" nativeButton={false} render={<Link href={`/receipts/${submission.id}`} />}>View receipt</Button></li>; })}</ul>}</div>
                 </div>
               </CardContent>
             </Card>

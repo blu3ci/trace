@@ -1,0 +1,1 @@
+ALTER TABLE "document_milestones" ADD COLUMN "content" json;

@@ -8,6 +8,10 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.documentsTable.id,
       to: r.assignmentSubmissionsTable.documentId,
     }),
+    milestones: r.many.documentMilestonesTable({
+      from: r.documentsTable.id,
+      to: r.documentMilestonesTable.documentId,
+    }),
   },
   assignmentsTable: {
     members: r.many.assignmentMembersTable({
@@ -32,6 +36,26 @@ export const relations = defineRelations(schema, (r) => ({
     }),
     document: r.one.documentsTable({
       from: r.assignmentSubmissionsTable.documentId,
+      to: r.documentsTable.id,
+    }),
+    receipt: r.one.assignmentReceiptsTable({
+      from: r.assignmentSubmissionsTable.id,
+      to: r.assignmentReceiptsTable.submissionId,
+    }),
+  },
+  documentMilestonesTable: {
+    document: r.one.documentsTable({
+      from: r.documentMilestonesTable.documentId,
+      to: r.documentsTable.id,
+    }),
+  },
+  assignmentReceiptsTable: {
+    submission: r.one.assignmentSubmissionsTable({
+      from: r.assignmentReceiptsTable.submissionId,
+      to: r.assignmentSubmissionsTable.id,
+    }),
+    document: r.one.documentsTable({
+      from: r.assignmentReceiptsTable.documentId,
       to: r.documentsTable.id,
     }),
   },

@@ -15,10 +15,9 @@ import { pdf } from "@react-pdf/renderer";
 import { Block, BlockNoteEditor } from "@blocknote/core";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import debounce from "lodash/debounce";
+import { useEffect, useRef, useState } from "react";
 
-const DEBOUNCE_DELAY = 1500;
+const SAVE_DELAY = 1500;
 
 export default function Editor({
   title,
@@ -32,28 +31,57 @@ export default function Editor({
   isSubmitted: boolean;
 }) {
   const [isSaving, setIsSaving] = useState(false);
+  const [saveRequest, setSaveRequest] = useState(0);
+  const activeMillis = useRef(0);
+  const hasCapturedMilestone = useRef(false);
+  const lastInteractionAt = useRef<number | null>(null);
+  const lastMilestoneAt = useRef<number | null>(null);
   const editor = useCreateBlockNote({
     autofocus: true,
     initialContent: content ?? undefined,
   });
 
-  const debouncedChangeHandler = useMemo(
-    () => debounce(async () => {
-      if (isSubmitted) return;
+  useEffect(() => {
+    if (!saveRequest || isSubmitted) return;
 
+    const timeout = window.setTimeout(async () => {
       setIsSaving(true);
       const document: Block[] = editor.document;
-      await saveDocument(documentId, document);
+      const now = Date.now();
+      const wordCount = countDocumentWords(document);
+      const shouldCaptureMilestone = wordCount > 0 && (
+        !hasCapturedMilestone.current
+        || !lastMilestoneAt.current
+        || now - lastMilestoneAt.current >= 60_000
+      );
+      const milestone = shouldCaptureMilestone
+        ? {
+          activeSeconds: Math.round(activeMillis.current / 1000),
+          blockCount: document.length,
+          wordCount,
+        }
+        : undefined;
+      await saveDocument(documentId, document, milestone);
+      if (milestone) {
+        hasCapturedMilestone.current = true;
+        lastMilestoneAt.current = now;
+        activeMillis.current = 0;
+      }
       setIsSaving(false);
-    }, DEBOUNCE_DELAY),
-    [documentId, editor, isSubmitted]
-  );
+    }, SAVE_DELAY);
 
-  useEffect(() => {
-    return () => {
-      debouncedChangeHandler.cancel();
-    };
-  }, [debouncedChangeHandler]);
+    return () => window.clearTimeout(timeout);
+  }, [documentId, editor, isSubmitted, saveRequest]);
+
+  const recordEditingActivity = () => {
+    const now = Date.now();
+    const previousInteraction = lastInteractionAt.current;
+    if (previousInteraction && now - previousInteraction < 15_000) {
+      activeMillis.current += now - previousInteraction;
+    }
+    lastInteractionAt.current = now;
+    setSaveRequest((request) => request + 1);
+  };
 
   // Renders the editor instance using a React component.
   return (
@@ -74,7 +102,7 @@ export default function Editor({
             editable={!isSubmitted}
             // formattingToolbar={false}
             onChange={() => {
-              if (!isSubmitted) debouncedChangeHandler();
+              if (!isSubmitted) recordEditingActivity();
             }}
             sideMenu={false}
             comments={false}
@@ -83,6 +111,22 @@ export default function Editor({
       </div>
     </div>
   );
+}
+
+function countDocumentWords(blocks: Block[]) {
+  return extractText(blocks)
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+}
+
+function extractText(value: unknown): string {
+  if (Array.isArray(value)) return value.map(extractText).join(" ");
+  if (!value || typeof value !== "object") return "";
+  const record = value as { content?: unknown; text?: unknown };
+  if (typeof record.text === "string") return record.text;
+  return extractText(record.content);
 }
 
 function DocumentHeader({

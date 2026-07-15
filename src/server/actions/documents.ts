@@ -2,7 +2,9 @@
 
 import { db } from "@/db";
 import {
+  assignmentReceiptsTable,
   assignmentSubmissionsTable,
+  documentMilestonesTable,
   documentsTable,
 } from "@/db/schema";
 import {
@@ -118,16 +120,46 @@ export async function submitAssignmentSubmission(
 
   if (!membership) return;
 
-  await db
+  const submission = await db.query.assignmentSubmissionsTable.findFirst({
+    where: { assignmentId, clerkUserId: userId },
+    columns: { id: true, documentId: true, submittedAt: true },
+  });
+  if (!submission || submission.submittedAt) return;
+
+  const document = await db.query.documentsTable.findFirst({
+    where: { id: submission.documentId, clerkUserId: userId },
+    columns: { content: true },
+  });
+  if (!document?.content) return;
+
+  const milestones = await db.query.documentMilestonesTable.findMany({
+    where: { documentId: submission.documentId },
+    columns: { activeSeconds: true },
+  });
+  const submittedAt = new Date();
+  const [updatedSubmission] = await db
     .update(assignmentSubmissionsTable)
-    .set({ submittedAt: new Date() })
+    .set({ submittedAt })
     .where(
       and(
         eq(assignmentSubmissionsTable.assignmentId, assignmentId),
         eq(assignmentSubmissionsTable.clerkUserId, userId),
         isNull(assignmentSubmissionsTable.submittedAt),
       ),
-    );
+    )
+    .returning({ id: assignmentSubmissionsTable.id });
+
+  if (!updatedSubmission) return;
+
+  await db.insert(assignmentReceiptsTable).values({
+    submissionId: submission.id,
+    documentId: submission.documentId,
+    finalContent: document.content,
+    finalWordCount: countWords(document.content),
+    revisionCount: milestones.length,
+    activeSeconds: milestones.reduce((total, milestone) => total + milestone.activeSeconds, 0),
+    submittedAt,
+  }).onConflictDoNothing();
 
   revalidatePath("/dashboard/assignments");
   revalidatePath("/dashboard/assignments/instructor");
@@ -189,7 +221,11 @@ export async function updateDocumentTitle(
   return { error: false };
 }
 
-export async function saveDocument(documentId: string, jsonBlocks: Block[]) {
+export async function saveDocument(
+  documentId: string,
+  jsonBlocks: Block[],
+  milestone?: { activeSeconds: number; blockCount: number; wordCount: number },
+) {
   const { userId } = await auth();
 
   if (!userId) return { error: true };
@@ -206,4 +242,38 @@ export async function saveDocument(documentId: string, jsonBlocks: Block[]) {
     );
 
   if (rowCount === 0) return {error: true};
+
+  if (milestone && isValidMilestone(milestone)) {
+    await db.insert(documentMilestonesTable).values({
+      documentId,
+      activeSeconds: milestone.activeSeconds,
+      blockCount: milestone.blockCount,
+      content: jsonBlocks,
+      wordCount: milestone.wordCount,
+    });
+  }
+}
+
+function isValidMilestone(milestone: { activeSeconds: number; blockCount: number; wordCount: number }) {
+  return [milestone.activeSeconds, milestone.blockCount, milestone.wordCount]
+    .every((value) => Number.isInteger(value) && value >= 0)
+    && milestone.activeSeconds <= 90 * 60
+    && milestone.blockCount <= 100_000
+    && milestone.wordCount <= 1_000_000;
+}
+
+function countWords(blocks: Block[]) {
+  return extractText(blocks)
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+}
+
+function extractText(value: unknown): string {
+  if (Array.isArray(value)) return value.map(extractText).join(" ");
+  if (!value || typeof value !== "object") return "";
+  const record = value as { content?: unknown; text?: unknown };
+  if (typeof record.text === "string") return record.text;
+  return extractText(record.content);
 }

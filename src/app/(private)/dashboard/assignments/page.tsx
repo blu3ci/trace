@@ -36,7 +36,8 @@ export default async function AssignmentsPage() {
     ? []
     : await db.query.assignmentSubmissionsTable.findMany({
       where: { assignmentId: { in: assignmentIds }, clerkUserId: userId },
-      columns: { assignmentId: true, documentId: true, submittedAt: true },
+      columns: { id: true, assignmentId: true, documentId: true, submittedAt: true },
+      with: { receipt: { columns: { id: true } } },
     });
   const submissionsByAssignment = new Map(
     submissions.map((submission) => [submission.assignmentId, submission]),
@@ -120,9 +121,12 @@ export default async function AssignmentsPage() {
                             <FilePenLine className="size-4" /> {submission.submittedAt ? "View submission" : "Continue submission"}
                           </Button>
                           {submission.submittedAt ? (
-                            <Badge className="bg-[#e5f1e8] text-[#315943]">
-                              <CheckCircle2 /> Submitted
-                            </Badge>
+                            <>
+                              <Badge className="bg-[#e5f1e8] text-[#315943]">
+                                <CheckCircle2 /> Submitted
+                              </Badge>
+                              {submission.receipt && <Button variant="outline" nativeButton={false} render={<Link href={`/receipts/${submission.id}`} />}>View receipt</Button>}
+                            </>
                           ) : (
                             <form action={submitAssignmentSubmission.bind(null, assignment.id)}>
                               <Button type="submit">
