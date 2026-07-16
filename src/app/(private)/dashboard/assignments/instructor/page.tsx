@@ -1,13 +1,13 @@
-import { auth, clerkClient } from "@clerk/nextjs/server";
-import { ClipboardList, KeyRound, Plus, UsersRound } from "lucide-react";
+import { auth } from "@clerk/nextjs/server";
+import { ClipboardList, Plus, UsersRound } from "lucide-react";
 import Link from "next/link";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/db";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AssignmentForm } from "../assignment-form";
 import { DueDate } from "../page";
+import { AssignmentCode } from "./assignment-code";
 
 export const revalidate = 0;
 
@@ -18,15 +18,8 @@ export default async function InstructorAssignmentsPage() {
   const assignments = await db.query.assignmentsTable.findMany({
     where: { clerkUserId: userId },
     orderBy: ({ dueDate, createdAt }, { asc, desc }) => [asc(dueDate), desc(createdAt)],
-    with: { members: true, submissions: { with: { receipt: { columns: { id: true } } } } },
+    with: { members: true },
   });
-  const studentIds = [...new Set(assignments.flatMap((assignment) => assignment.members.map((member) => member.clerkUserId)))];
-  const students = studentIds.length === 0 ? [] : await getUsers(studentIds);
-  const profiles = new Map(students.map((student) => [student.id, {
-    name: formatName(student),
-    email: student.emailAddresses.find((email) => email.id === student.primaryEmailAddressId)?.emailAddress,
-    imageUrl: student.imageUrl,
-  }]));
   const today = new Date().toISOString().slice(0, 10);
 
   return (
@@ -63,9 +56,9 @@ export default async function InstructorAssignmentsPage() {
               <CardHeader><div className="flex flex-wrap items-start justify-between gap-3"><CardTitle className="text-lg">{assignment.title}</CardTitle><DueDate dueDate={assignment.dueDate} isOverdue={assignment.dueDate ? assignment.dueDate < today : false} /></div></CardHeader>
               <CardContent className="flex flex-col gap-4">
                 {assignment.description && <p className="whitespace-pre-wrap leading-6 text-[#607067]">{assignment.description}</p>}
-                <div className="rounded-lg border border-[#dbe3dc] bg-[#f7faf7] p-3"><div className="flex items-center gap-2 text-sm font-medium text-[#315943]"><KeyRound className="size-4" /> Assignment code: <span className="font-mono tracking-widest">{assignment.accessCode}</span></div>
-                  <div className="mt-3 flex items-start gap-2 text-sm text-[#607067]"><UsersRound className="mt-0.5 size-4 shrink-0" /><div><p className="font-medium text-foreground">Assigned students ({assignment.members.length})</p>{assignment.members.length === 0 ? <p className="mt-1">No students have joined yet.</p> : <ul className="mt-2 flex flex-col gap-2">{assignment.members.map((member) => { const profile = profiles.get(member.clerkUserId); const name = profile?.name ?? "Student"; return <li key={member.clerkUserId} className="flex items-center gap-2"><Avatar size="sm">{profile?.imageUrl && <AvatarImage src={profile.imageUrl} alt="" />}<AvatarFallback>{initials(name)}</AvatarFallback></Avatar><div className="min-w-0"><p className="truncate font-medium text-foreground">{name}</p>{profile?.email && <p className="truncate text-xs text-muted-foreground">{profile.email}</p>}</div></li>; })}</ul>}</div></div>
-                  <div className="mt-4 border-t border-[#dbe3dc] pt-3"><p className="text-sm font-medium text-foreground">Submitted receipts ({assignment.submissions.filter((submission) => submission.receipt).length})</p>{assignment.submissions.filter((submission) => submission.receipt).length === 0 ? <p className="mt-1 text-sm text-[#607067]">No submitted receipts yet.</p> : <ul className="mt-2 flex flex-col gap-2">{assignment.submissions.filter((submission) => submission.receipt).map((submission) => { const profile = profiles.get(submission.clerkUserId); const name = profile?.name ?? "Student"; return <li key={submission.id} className="flex items-center justify-between gap-3"><span className="truncate text-sm text-[#405049]">{name}</span><Button size="sm" variant="outline" nativeButton={false} render={<Link href={`/receipts/${submission.id}`} />}>View receipt</Button></li>; })}</ul>}</div>
+                <div className="rounded-lg border border-[#dbe3dc] bg-[#f7faf7] p-3"><AssignmentCode code={assignment.accessCode} />
+                  <div className="mt-3 flex items-center gap-2 text-sm text-[#607067]"><UsersRound className="size-4 shrink-0" /><p className="font-medium text-foreground">{assignment.members.length} {assignment.members.length === 1 ? "student" : "students"}</p></div>
+                  <Button className="mt-4 w-full" variant="outline" nativeButton={false} render={<Link href={`/dashboard/assignments/instructor/${assignment.id}`} />}>View submissions</Button>
                 </div>
               </CardContent>
             </Card>
@@ -77,7 +70,3 @@ export default async function InstructorAssignmentsPage() {
     </div>
   );
 }
-
-function initials(name: string) { return name.split(/\s+/).map((part) => part[0]).join("").slice(0, 2).toUpperCase(); }
-function formatName(user: { firstName: string | null; lastName: string | null; username: string | null; emailAddresses: Array<{ emailAddress: string }> }) { return [user.firstName, user.lastName].filter(Boolean).join(" ") || user.username || user.emailAddresses[0]?.emailAddress || "Student"; }
-async function getUsers(userIds: string[]) { const client = await clerkClient(); const responses = await Promise.all(Array.from({ length: Math.ceil(userIds.length / 100) }, (_, index) => { const ids = userIds.slice(index * 100, (index + 1) * 100); return client.users.getUserList({ userId: ids, limit: ids.length }); })); return responses.flatMap((response) => response.data); }
