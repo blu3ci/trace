@@ -7,10 +7,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { db } from "@/db";
 import { auth } from "@clerk/nextjs/server";
 import { Block } from "@blocknote/core";
-import { CalendarDays, CheckCircle2, ClipboardList, FilePlusCorner, FileText } from "lucide-react";
+import { CalendarDays, CheckCircle2, ClipboardList, Ellipsis, FilePlusCorner, FileText } from "lucide-react";
 import Link from "next/link";
 
 export const revalidate = 0;
@@ -110,45 +111,57 @@ function Document({
     : null;
 
   return (
-    <Link href={`/document/${id}`} className="group">
-      <Card className="h-full min-h-52 border-[#e0e5e0] transition-shadow group-hover:shadow-sm">
-        <CardHeader>
-          <span className="grid size-10 place-items-center rounded-full bg-[#e5f1e8] text-[#315943]">
-            <FileText className="size-5" />
-          </span>
-        </CardHeader>
-        <CardContent className="grow">
-          <div className="min-h-20 rounded-lg border border-[#edf0ed] bg-[#fbfcfa] px-3 py-2.5 text-sm leading-5 text-[#607067]">
-            {preview ? (
-              <p className="line-clamp-3 whitespace-pre-wrap">{preview}</p>
-            ) : (
-              <p className="text-[#8a968e]">No text yet — open to start writing.</p>
-            )}
-          </div>
-        </CardContent>
-        <CardFooter className="flex flex-col items-start border-[#e0e5e0] bg-[#f7faf7]">
-          <CardTitle className="line-clamp-2">{title}</CardTitle>
-          {assignment ? (
-            <div className="mt-2 flex flex-wrap items-center gap-2">
-              <Badge className="bg-[#e5f1e8] text-[#315943]">
-                <ClipboardList /> Assignment
-              </Badge>
-              {submissionStatus ? (
-                <CardDescription className={submissionStatus === "Submitted late" ? "flex items-center gap-1 text-[#9b332a]" : "flex items-center gap-1 text-[#315943]"}>
-                  <CheckCircle2 className="size-3.5" /> {submissionStatus}
-                </CardDescription>
+    <div className="relative h-full">
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className="absolute top-3 right-3 z-10 text-[#607067]"
+        aria-label={`Manage ${title}`}
+        nativeButton={false}
+        render={<Link href={`/document/${id}/settings`} />}
+      >
+        <Ellipsis />
+      </Button>
+      <Link href={`/document/${id}`} className="group block h-full">
+        <Card className="h-full min-h-52 border-[#e0e5e0] transition-shadow group-hover:shadow-sm">
+          <CardHeader>
+            <span className="grid size-10 place-items-center rounded-full bg-[#e5f1e8] text-[#315943]">
+              <FileText className="size-5" />
+            </span>
+          </CardHeader>
+          <CardContent className="grow">
+            <div className="min-h-20 rounded-lg border border-[#edf0ed] bg-[#fbfcfa] px-3 py-2.5 text-sm leading-5 text-[#607067]">
+              {preview ? (
+                <p className="line-clamp-3 whitespace-pre-wrap">{preview}</p>
               ) : (
-                <CardDescription className="flex items-center gap-1">
-                  <CalendarDays className="size-3.5" /> {assignment.dueDate ? `Due ${formatDate(assignment.dueDate)}` : "No due date"}
-                </CardDescription>
+                <p className="text-[#8a968e]">No text yet — open to start writing.</p>
               )}
             </div>
-          ) : (
-            <CardDescription className="mt-1">Click to edit document</CardDescription>
-          )}
-        </CardFooter>
-      </Card>
-    </Link>
+          </CardContent>
+          <CardFooter className="flex flex-col items-start border-[#e0e5e0] bg-[#f7faf7]">
+            <CardTitle className="line-clamp-2">{title}</CardTitle>
+            {assignment ? (
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Badge className="bg-[#e5f1e8] text-[#315943]">
+                  <ClipboardList /> Assignment
+                </Badge>
+                {submissionStatus ? (
+                  <CardDescription className={submissionStatus === "Submitted late" ? "flex items-center gap-1 text-[#9b332a]" : "flex items-center gap-1 text-[#315943]"}>
+                    <CheckCircle2 className="size-3.5" /> {submissionStatus}
+                  </CardDescription>
+                ) : (
+                  <CardDescription className="flex items-center gap-1">
+                    <CalendarDays className="size-3.5" /> {assignment.dueDate ? `Due ${formatDate(assignment.dueDate)}` : "No due date"}
+                  </CardDescription>
+                )}
+              </div>
+            ) : (
+              <CardDescription className="mt-1">Click to edit document</CardDescription>
+            )}
+          </CardFooter>
+        </Card>
+      </Link>
+    </div>
   );
 }
 

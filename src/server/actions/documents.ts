@@ -221,6 +221,31 @@ export async function updateDocumentTitle(
   return { error: false };
 }
 
+export async function deleteDocument(documentId: string): Promise<{ error: boolean } | undefined> {
+  const { userId } = await auth();
+
+  if (!userId) return { error: true };
+
+  try {
+    const { rowCount } = await db
+      .delete(documentsTable)
+      .where(
+        and(
+          eq(documentsTable.id, documentId),
+          eq(documentsTable.clerkUserId, userId),
+          isEditableDocument(documentId),
+        ),
+      );
+
+    if (rowCount === 0) return { error: true };
+  } catch {
+    return { error: true };
+  }
+
+  revalidatePath("/dashboard");
+  redirect("/dashboard");
+}
+
 export async function saveDocument(
   documentId: string,
   jsonBlocks: Block[],
