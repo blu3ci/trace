@@ -6,6 +6,7 @@ import { Block } from "@blocknote/core";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/db";
+import { RevisionComparisonLink } from "@/components/receipt/revision-comparison-link";
 import { ReceiptPreview } from "./DynamicReceiptPreview";
 import { InstructorReceiptSelector } from "./instructor-receipt-selector";
 
@@ -82,7 +83,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
             <CardContent>
               <p className="text-sm leading-6 text-[#607067]">Each milestone describes the visible change in the draft since the previous saved moment.</p>
               <ol className="mt-5 space-y-4 border-l border-[#ced9d0] pl-4">
-                {milestones.length === 0 ? <li className="text-sm text-[#69756d]">This submission was completed before receipt tracking began.</li> : milestones.map((milestone, index) => { const summary = summarizeMilestone(milestone, milestones[index - 1]); return <li key={`${milestone.createdAt.toISOString()}-${index}`} className="relative text-sm"><span className="absolute -left-[1.28rem] top-1.5 size-2 rounded-full bg-[#78a782]" /><p className="font-medium leading-5">{summary.title}</p><p className="mt-1 leading-5 text-[#607067]">{summary.text}</p><p className="mt-1 text-[#69756d]">{formatDateTime(milestone.createdAt)} · {formatDuration(milestone.activeSeconds)} active writing</p></li>; })}
+                {milestones.length === 0 ? <li className="text-sm text-[#69756d]">This submission was completed before receipt tracking began.</li> : milestones.map((milestone, index) => { const summary = summarizeMilestone(milestone, milestones[index - 1]); return <li key={`${milestone.createdAt.toISOString()}-${index}`} className="relative text-sm"><span className="absolute -left-[1.28rem] top-1.5 size-2 rounded-full bg-[#78a782]" /><p className="font-medium leading-5">{summary.title}</p><p className="mt-1 leading-5 text-[#607067]">{summary.text}</p><p className="mt-1 text-[#69756d]">{formatDateTime(milestone.createdAt)} · {formatDuration(milestone.activeSeconds)} active writing</p>{index > 0 && <div className="mt-3"><RevisionComparisonLink documentId={submission.documentId} previous={milestones[index - 1]} current={milestone} /></div>}</li>; })}
               </ol>
             </CardContent>
           </Card>

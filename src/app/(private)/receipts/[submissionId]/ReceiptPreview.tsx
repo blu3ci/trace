@@ -11,13 +11,13 @@ import { pdf } from "@react-pdf/renderer";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-export default function ReceiptPreview({ content, title }: { content: Block[]; title: string }) {
+export default function ReceiptPreview({ content, title, label = "Final submitted document" }: { content: Block[]; title: string; label?: string }) {
   const editor = useCreateBlockNote({ initialContent: content });
 
   return (
     <section className="overflow-hidden rounded-xl border border-[#dbe3dc] bg-white shadow-sm">
       <div className="flex items-center justify-between border-b border-[#e5e9e5] bg-[#f8faf8] px-5 py-3">
-        <p className="text-sm font-medium text-[#405049]">Final submitted document</p>
+        <p className="text-sm font-medium text-[#405049]">{label}</p>
         <Button variant="outline" size="sm" onClick={() => exportPdf(editor, title)}>
           <Download /> Export PDF
         </Button>

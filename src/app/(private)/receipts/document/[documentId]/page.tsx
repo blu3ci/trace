@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/db";
+import { RevisionComparisonLink } from "@/components/receipt/revision-comparison-link";
 import { ReceiptPreview } from "../../[submissionId]/DynamicReceiptPreview";
 
 export const revalidate = 0;
@@ -24,7 +25,7 @@ export default async function DocumentReceiptPage({ params }: { params: Promise<
   const milestones = await db.query.documentMilestonesTable.findMany({
     where: { documentId },
     orderBy: ({ createdAt }, { asc }) => asc(createdAt),
-    columns: { activeSeconds: true, createdAt: true, wordCount: true },
+    columns: { activeSeconds: true, content: true, createdAt: true, wordCount: true },
   });
   const activeSeconds = milestones.reduce((total, milestone) => total + milestone.activeSeconds, 0);
 
@@ -52,7 +53,7 @@ export default async function DocumentReceiptPage({ params }: { params: Promise<
             <CardHeader><CardTitle className="flex items-center gap-2"><FileCheck2 className="size-4 text-[#315943]" /> Writing journey</CardTitle></CardHeader>
             <CardContent>
               <p className="text-sm leading-6 text-[#607067]">Milestones are captured as you save changes to this document.</p>
-              {milestones.length === 0 ? <p className="mt-5 text-sm text-[#69756d]">No writing milestones have been saved yet.</p> : <ol className="mt-5 space-y-4 border-l border-[#ced9d0] pl-4">{milestones.map((milestone, index) => <li key={`${milestone.createdAt.toISOString()}-${index}`} className="relative text-sm"><span className="absolute -left-[1.28rem] top-1.5 size-2 rounded-full bg-[#78a782]" /><p className="font-medium leading-5">Saved at {milestone.wordCount.toLocaleString()} words</p><p className="mt-1 text-[#69756d]">{formatDateTime(milestone.createdAt)} · {formatDuration(milestone.activeSeconds)} active writing</p></li>)}</ol>}
+              {milestones.length === 0 ? <p className="mt-5 text-sm text-[#69756d]">No writing milestones have been saved yet.</p> : <ol className="mt-5 space-y-4 border-l border-[#ced9d0] pl-4">{milestones.map((milestone, index) => <li key={`${milestone.createdAt.toISOString()}-${index}`} className="relative text-sm"><span className="absolute -left-[1.28rem] top-1.5 size-2 rounded-full bg-[#78a782]" /><p className="font-medium leading-5">Saved at {milestone.wordCount.toLocaleString()} words</p><p className="mt-1 text-[#69756d]">{formatDateTime(milestone.createdAt)} · {formatDuration(milestone.activeSeconds)} active writing</p>{index > 0 && <div className="mt-3"><RevisionComparisonLink documentId={document.id} previous={milestones[index - 1]} current={milestone} /></div>}</li>)}</ol>}
             </CardContent>
           </Card>
           <ReceiptPreview title={document.title} content={document.content ?? []} />
