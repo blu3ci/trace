@@ -34,12 +34,14 @@ export default function Editor({
   isAssignmentDocument: boolean;
   receiptHref?: string;
 }) {
-  const [isSaving, setIsSaving] = useState(false);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "pending" | "saving" | "saved" | "error">("idle");
   const [saveRequest, setSaveRequest] = useState(0);
   const activeMillis = useRef(0);
   const hasCapturedMilestone = useRef(false);
   const lastInteractionAt = useRef<number | null>(null);
   const lastMilestoneAt = useRef<number | null>(null);
+  const latestSaveRequest = useRef(0);
+  const saveQueue = useRef(Promise.resolve());
   const editor = useCreateBlockNote({
     autofocus: true,
     initialContent: content ?? undefined,
@@ -48,11 +50,11 @@ export default function Editor({
   useEffect(() => {
     if (!saveRequest || isSubmitted) return;
 
-    const timeout = window.setTimeout(async () => {
-      setIsSaving(true);
+    const timeout = window.setTimeout(() => {
       const document: Block[] = editor.document;
       const now = Date.now();
       const wordCount = countDocumentWords(document);
+      const activeMillisAtSave = activeMillis.current;
       const shouldCaptureMilestone = wordCount > 0 && (
         !hasCapturedMilestone.current
         || !lastMilestoneAt.current
@@ -60,22 +62,49 @@ export default function Editor({
       );
       const milestone = shouldCaptureMilestone
         ? {
-          activeSeconds: Math.round(activeMillis.current / 1000),
+          activeSeconds: Math.round(activeMillisAtSave / 1000),
           blockCount: document.length,
           wordCount,
         }
         : undefined;
-      await saveDocument(documentId, document, milestone);
-      if (milestone) {
-        hasCapturedMilestone.current = true;
-        lastMilestoneAt.current = now;
-        activeMillis.current = 0;
-      }
-      setIsSaving(false);
+
+      saveQueue.current = saveQueue.current.then(async () => {
+        if (latestSaveRequest.current === saveRequest) setSaveStatus("saving");
+
+        try {
+          const result = await saveDocument(documentId, document, milestone);
+          if (result?.error) throw new Error("Unable to save document");
+
+          if (milestone) {
+            hasCapturedMilestone.current = true;
+            lastMilestoneAt.current = now;
+            activeMillis.current = Math.max(0, activeMillis.current - activeMillisAtSave);
+          }
+          if (latestSaveRequest.current === saveRequest) setSaveStatus("saved");
+        } catch {
+          if (latestSaveRequest.current === saveRequest) setSaveStatus("error");
+        }
+      });
     }, SAVE_DELAY);
 
     return () => window.clearTimeout(timeout);
   }, [documentId, editor, isSubmitted, saveRequest]);
+
+  useEffect(() => {
+    const warnBeforeLeaving = (event: BeforeUnloadEvent) => {
+      if (saveStatus !== "pending" && saveStatus !== "saving") return;
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", warnBeforeLeaving);
+    return () => window.removeEventListener("beforeunload", warnBeforeLeaving);
+  }, [saveStatus]);
+
+  const requestSave = () => {
+    latestSaveRequest.current += 1;
+    setSaveRequest(latestSaveRequest.current);
+  };
 
   const recordEditingActivity = () => {
     const now = Date.now();
@@ -84,7 +113,8 @@ export default function Editor({
       activeMillis.current += now - previousInteraction;
     }
     lastInteractionAt.current = now;
-    setSaveRequest((request) => request + 1);
+    setSaveStatus("pending");
+    requestSave();
   };
 
   // Renders the editor instance using a React component.
@@ -94,8 +124,11 @@ export default function Editor({
         editor={editor}
         title={title}
         documentId={documentId}
-        isSaving={isSaving}
-        setIsSaving={setIsSaving}
+        saveStatus={saveStatus}
+        onRetrySave={() => {
+          setSaveStatus("pending");
+          requestSave();
+        }}
         isSubmitted={isSubmitted}
         isAssignmentDocument={isAssignmentDocument}
         receiptHref={receiptHref}
@@ -139,8 +172,8 @@ function DocumentHeader({
   editor,
   title,
   documentId,
-  isSaving,
-  setIsSaving,
+  saveStatus,
+  onRetrySave,
   isSubmitted,
   isAssignmentDocument,
   receiptHref,
@@ -148,13 +181,14 @@ function DocumentHeader({
   editor: BlockNoteEditor;
   title: string;
   documentId: string;
-  isSaving: boolean;
-  setIsSaving: React.Dispatch<React.SetStateAction<boolean>>;
+  saveStatus: "idle" | "pending" | "saving" | "saved" | "error";
+  onRetrySave: () => void;
   isSubmitted: boolean;
   isAssignmentDocument: boolean;
   receiptHref?: string;
 }) {
   const [draftTitle, setDraftTitle] = useState(title);
+  const [isSavingTitle, setIsSavingTitle] = useState(false);
 
   async function exportPDF() {
     const exporter = new PDFExporter(editor.schema, pdfDefaultSchemaMappings);
@@ -189,11 +223,11 @@ function DocumentHeader({
       return;
     }
 
-    setIsSaving(true);
+    setIsSavingTitle(true);
     const result = await updateDocumentTitle(documentId, {
       title: trimmedTitle,
     });
-    setIsSaving(false);
+    setIsSavingTitle(false);
 
     if (result?.error) {
       setDraftTitle(title);
@@ -244,11 +278,8 @@ function DocumentHeader({
             <span className="hidden items-center gap-1.5 rounded-full bg-[#e5f1e8] px-2.5 py-1 text-xs font-medium text-[#315943] sm:flex">
               <CheckCircle2 className="size-3.5" /> Submitted
             </span>
-          ) : isSaving && (
-            <span className="hidden items-center gap-1.5 rounded-full bg-[#e5f1e8] px-2.5 py-1 text-xs font-medium text-[#315943] sm:flex">
-              <span className="size-1.5 animate-pulse rounded-full bg-[#567160]" />
-              Saving
-            </span>
+          ) : (
+            <SaveStatus status={isSavingTitle ? "saving" : saveStatus} onRetry={onRetrySave} />
           )}
           <Button
             variant="outline"
@@ -268,5 +299,20 @@ function DocumentHeader({
         </div>
       </div>
     </header>
+  );
+}
+
+function SaveStatus({ status, onRetry }: { status: "idle" | "pending" | "saving" | "saved" | "error"; onRetry: () => void }) {
+  if (status === "idle") return null;
+  if (status === "error") {
+    return <Button variant="outline" size="sm" onClick={onRetry}>Retry save</Button>;
+  }
+
+  const isSaving = status === "pending" || status === "saving";
+  return (
+    <span aria-live="polite" className="hidden items-center gap-1.5 rounded-full bg-[#e5f1e8] px-2.5 py-1 text-xs font-medium text-[#315943] sm:flex">
+      {isSaving ? <span className="size-1.5 animate-pulse rounded-full bg-[#567160]" /> : <CheckCircle2 className="size-3.5" />}
+      {isSaving ? "Saving" : "Saved"}
+    </span>
   );
 }

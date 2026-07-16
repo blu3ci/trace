@@ -47,7 +47,7 @@ const phases = [
 ];
 
 const principles = [
-  "Works inside the Google Docs workflow students already know",
+  "A focused writing space that keeps drafts and assignments together",
   "Captures meaningful drafts, never keystrokes outside the document",
   "Makes rapid bulk pastes visible without making accusations",
 ];
@@ -165,8 +165,8 @@ export default async function Home() {
               <FeatureCard
                 icon={FileText}
                 number="01"
-                title="Write where you write"
-                text="Open Trace in Google Docs and start a session. No new editor, no new habits."
+                title="Start with a focused draft"
+                text="Write in Trace, where your documents, assignments, and writing progress stay in one place."
               />
             </Reveal>
             <Reveal delay={220}>
@@ -202,9 +202,8 @@ export default async function Home() {
               A receipt for real intellectual effort.
             </h2>
             <p className="mt-5 max-w-xl text-lg leading-8 text-[#65716a]">
-              A teacher opens one link—no account or extension required—and sees a
-              student&apos;s final work alongside the meaningful moments that
-              shaped it.
+              In the Trace workspace, a teacher sees a student&apos;s final work
+              alongside the meaningful moments that shaped it.
             </p>
             <ul className="mt-8 space-y-4">
               {principles.map((principle) => (
