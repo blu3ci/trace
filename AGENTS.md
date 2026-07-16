@@ -10,6 +10,7 @@ Before any Next.js work, find and read the relevant doc in `node_modules/next/di
 
 - Use `pnpm` as the default package manager for installing dependencies and running package scripts.
 - Use shadcn/ui components whenever they fit the interface; install needed shadcn components instead of recreating their primitives.
+- Place reusable components in `src/components/`, not inside route or feature directories.
 - Build application forms with React Hook Form and Yup validation. Place all Yup form schemas in `src/formSchemas/`, never inline with the form component.
 - Write commit messages using the Conventional Commits format, for example: `feat: add dashboard`.
 - Always run `pnpm lint` before committing. If the command is unavailable or fails, report it before creating the commit.
