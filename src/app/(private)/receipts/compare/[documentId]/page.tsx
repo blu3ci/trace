@@ -86,12 +86,41 @@ function ChangeList({ icon: Icon, title, entries, className }: { icon: typeof Pl
 function findChanges(previousContent: Block[], currentContent: Block[]) {
   const previous = blockTexts(previousContent);
   const current = blockTexts(currentContent);
+  const previousOnly = previous.filter((block) => !current.some((currentBlock) => sameBlock(block, currentBlock)));
+  const currentOnly = current.filter((block) => !previous.some((previousBlock) => sameBlock(block, previousBlock)));
+  const removed: string[] = [];
+  const added: string[] = [];
+
+  const pairedBlocks = Math.min(previousOnly.length, currentOnly.length);
+  for (let index = 0; index < pairedBlocks; index += 1) {
+    const sentenceChanges = findSentenceChanges(previousOnly[index], currentOnly[index]);
+    removed.push(...sentenceChanges.removed);
+    added.push(...sentenceChanges.added);
+  }
+
   return {
-    removed: previous.filter((block) => !current.some((currentBlock) => sameBlock(block, currentBlock))),
-    added: current.filter((block) => !previous.some((previousBlock) => sameBlock(block, previousBlock))),
+    removed: [...removed, ...previousOnly.slice(pairedBlocks).flatMap(splitSentences)],
+    added: [...added, ...currentOnly.slice(pairedBlocks).flatMap(splitSentences)],
   };
 }
 
 function blockTexts(blocks: Block[]) { return blocks.map((block) => extractText((block as unknown as { content: unknown }).content)).filter(Boolean); }
 function extractText(value: unknown): string { if (Array.isArray(value)) return value.map(extractText).join(" "); if (!value || typeof value !== "object") return ""; const record = value as { content?: unknown; text?: unknown }; return typeof record.text === "string" ? record.text : extractText(record.content); }
 function sameBlock(first: string, second: string) { return first.replace(/\s+/g, " ").trim().toLocaleLowerCase() === second.replace(/\s+/g, " ").trim().toLocaleLowerCase(); }
+
+function findSentenceChanges(previous: string, current: string) {
+  const previousSentences = splitSentences(previous);
+  const currentSentences = splitSentences(current);
+  return {
+    removed: previousSentences.filter((sentence) => !currentSentences.some((currentSentence) => sameSentence(sentence, currentSentence))),
+    added: currentSentences.filter((sentence) => !previousSentences.some((previousSentence) => sameSentence(sentence, previousSentence))),
+  };
+}
+
+function splitSentences(value: string) {
+  return value.replace(/\s+/g, " ").trim().match(/[^.!?]+(?:[.!?]+(?=\s|$)|$)/g)?.map((sentence) => sentence.trim()).filter(Boolean) ?? [];
+}
+
+function sameSentence(first: string, second: string) {
+  return first.replace(/\s+/g, " ").trim().toLocaleLowerCase() === second.replace(/\s+/g, " ").trim().toLocaleLowerCase();
+}
