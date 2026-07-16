@@ -1,4 +1,4 @@
-import { auth } from "@clerk/nextjs/server";
+import { auth, clerkClient } from "@clerk/nextjs/server";
 import { ArrowLeft, CheckCircle2, Clock3, FileCheck2, History, PencilLine } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/db";
 import { ReceiptPreview } from "./DynamicReceiptPreview";
+import { InstructorReceiptSelector } from "./instructor-receipt-selector";
 
 export const revalidate = 0;
 
@@ -31,7 +32,18 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
     columns: { activeSeconds: true, blockCount: true, content: true, createdAt: true, wordCount: true },
   });
   const receipt = submission.receipt;
-  const backHref = isInstructor ? "/dashboard/assignments/instructor" : "/dashboard/assignments";
+  const backHref = isInstructor ? `/dashboard/assignments/instructor/${submission.assignmentId}` : "/dashboard/assignments";
+  const assignmentReceipts = isInstructor
+    ? await db.query.assignmentSubmissionsTable.findMany({
+      where: { assignmentId: submission.assignmentId },
+      with: { receipt: { columns: { id: true } } },
+      columns: { id: true, clerkUserId: true },
+    })
+    : [];
+  const receiptSubmissions = assignmentReceipts.filter((assignmentSubmission) => assignmentSubmission.receipt);
+  const studentIds = [...new Set(receiptSubmissions.map((assignmentSubmission) => assignmentSubmission.clerkUserId))];
+  const students = studentIds.length === 0 ? [] : await getUsers(studentIds);
+  const studentNames = new Map(students.map((student) => [student.id, formatName(student)]));
 
   return (
     <main className="min-h-screen bg-[#f7f8f7] pb-14 text-[#1d2521]">
@@ -48,6 +60,15 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
         <p className="text-sm font-semibold tracking-[0.12em] text-[#567160] uppercase">Proof of work</p>
         <h1 className="mt-2 text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">{submission.assignment.title}</h1>
         <p className="mt-2 text-[#65716a]">Submitted {formatDateTime(receipt.submittedAt)} · Final document preserved at submission.</p>
+        {isInstructor && (
+          <InstructorReceiptSelector
+            submissionId={submission.id}
+            receipts={receiptSubmissions.map((assignmentSubmission) => ({
+              submissionId: assignmentSubmission.id,
+              studentName: studentNames.get(assignmentSubmission.clerkUserId) ?? "Student",
+            }))}
+          />
+        )}
 
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           <ReceiptStat icon={Clock3} label="Active writing time" value={formatDuration(receipt.activeSeconds)} />
@@ -200,4 +221,18 @@ function excerpt(value: string) {
 
 function formatDateTime(value: Date) {
   return new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" }).format(value);
+}
+
+function formatName(user: { firstName: string | null; lastName: string | null; username: string | null; emailAddresses: Array<{ emailAddress: string }> }) {
+  return [user.firstName, user.lastName].filter(Boolean).join(" ") || user.username || user.emailAddresses[0]?.emailAddress || "Student";
+}
+
+async function getUsers(userIds: string[]) {
+  const client = await clerkClient();
+  const responses = await Promise.all(Array.from({ length: Math.ceil(userIds.length / 100) }, (_, index) => {
+    const ids = userIds.slice(index * 100, (index + 1) * 100);
+    return client.users.getUserList({ userId: ids, limit: ids.length });
+  }));
+
+  return responses.flatMap((response) => response.data);
 }
