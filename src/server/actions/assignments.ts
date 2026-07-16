@@ -5,9 +5,11 @@ import "server-only";
 import { auth } from "@clerk/nextjs/server";
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { assignmentMembersTable, assignmentsTable } from "@/db/schema";
-import { joinAssignmentSchema, newAssignmentSchema } from "@/formSchemas/assignment";
+import { assignmentSubmissionSchema, joinAssignmentSchema, newAssignmentSchema } from "@/formSchemas/assignment";
 import * as yup from "yup";
 
 export async function createAssignment(
@@ -75,4 +77,24 @@ export async function joinAssignment(
   revalidatePath("/dashboard/assignments");
   revalidatePath("/dashboard/assignments/instructor");
   return { error: false };
+}
+
+export async function deleteAssignment(unsafeAssignmentId: string): Promise<{ error: boolean } | undefined> {
+  const { userId } = await auth();
+  if (!userId) return { error: true };
+
+  try {
+    const { assignmentId } = await assignmentSubmissionSchema.validate({ assignmentId: unsafeAssignmentId });
+    const { rowCount } = await db
+      .delete(assignmentsTable)
+      .where(and(eq(assignmentsTable.id, assignmentId), eq(assignmentsTable.clerkUserId, userId)));
+
+    if (rowCount === 0) return { error: true };
+  } catch {
+    return { error: true };
+  }
+
+  revalidatePath("/dashboard/assignments");
+  revalidatePath("/dashboard/assignments/instructor");
+  redirect("/dashboard/assignments/instructor");
 }

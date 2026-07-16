@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { db } from "@/db";
 import { DueDate, formatDate } from "../../page";
 import { AssignmentCode } from "../assignment-code";
+import { DeleteAssignmentButton } from "./delete-assignment-button";
 
 export const revalidate = 0;
 
@@ -65,7 +66,10 @@ export default async function AssignmentSubmissionsPage({
             <p className="mt-2 text-[#65716a]">Review submitted work and open each student’s verified receipt.</p>
             <div className="mt-4 rounded-lg border border-[#dbe3dc] bg-white px-3 py-2.5 w-fit"><AssignmentCode code={assignment.accessCode} /></div>
           </div>
-          <DueDate dueDate={assignment.dueDate} isOverdue={assignment.dueDate ? assignment.dueDate < today : false} />
+          <div className="flex flex-wrap items-center gap-3">
+            <DueDate dueDate={assignment.dueDate} isOverdue={assignment.dueDate ? assignment.dueDate < today : false} />
+            <DeleteAssignmentButton assignmentId={assignment.id} title={assignment.title} />
+          </div>
         </div>
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
