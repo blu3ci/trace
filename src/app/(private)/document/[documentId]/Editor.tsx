@@ -6,7 +6,7 @@ import "@blocknote/core/fonts/inter.css";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/shadcn";
 import "@blocknote/shadcn/style.css";
-import { ArrowLeft, CheckCircle2, Download, FileText } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Download, FileCheck2, FileText } from "lucide-react";
 import {
   PDFExporter,
   pdfDefaultSchemaMappings,
@@ -24,11 +24,15 @@ export default function Editor({
   documentId,
   content,
   isSubmitted,
+  isAssignmentDocument,
+  receiptHref,
 }: {
   title: string;
   documentId: string;
   content: Block[] | null;
   isSubmitted: boolean;
+  isAssignmentDocument: boolean;
+  receiptHref?: string;
 }) {
   const [isSaving, setIsSaving] = useState(false);
   const [saveRequest, setSaveRequest] = useState(0);
@@ -93,6 +97,8 @@ export default function Editor({
         isSaving={isSaving}
         setIsSaving={setIsSaving}
         isSubmitted={isSubmitted}
+        isAssignmentDocument={isAssignmentDocument}
+        receiptHref={receiptHref}
       />
       <div className="h-full overflow-y-auto py-2">
         <div className="max-w-250 min-h-full p-8 shadow-sm mx-auto">
@@ -136,6 +142,8 @@ function DocumentHeader({
   isSaving,
   setIsSaving,
   isSubmitted,
+  isAssignmentDocument,
+  receiptHref,
 }: {
   editor: BlockNoteEditor;
   title: string;
@@ -143,6 +151,8 @@ function DocumentHeader({
   isSaving: boolean;
   setIsSaving: React.Dispatch<React.SetStateAction<boolean>>;
   isSubmitted: boolean;
+  isAssignmentDocument: boolean;
+  receiptHref?: string;
 }) {
   const [draftTitle, setDraftTitle] = useState(title);
 
@@ -240,6 +250,16 @@ function DocumentHeader({
               Saving
             </span>
           )}
+          <Button
+            variant="outline"
+            nativeButton={false}
+            disabled={isAssignmentDocument && !isSubmitted}
+            render={receiptHref ? <Link href={receiptHref} /> : undefined}
+          >
+            <FileCheck2 />
+            <span className="hidden sm:inline">View receipt</span>
+            <span className="sr-only sm:hidden">View receipt</span>
+          </Button>
           <Button variant="outline" onClick={exportPDF}>
             <Download />
             <span className="hidden sm:inline">Export PDF</span>

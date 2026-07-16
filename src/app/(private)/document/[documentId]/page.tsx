@@ -24,8 +24,12 @@ export default async function DocumentPage({
 
   const submission = await db.query.assignmentSubmissionsTable.findFirst({
     where: { documentId, clerkUserId: userId },
-    columns: { submittedAt: true },
+    columns: { id: true, submittedAt: true },
+    with: { receipt: { columns: { id: true } } },
   });
+  const receiptHref = submission
+    ? submission.receipt ? `/receipts/${submission.id}` : undefined
+    : `/receipts/document/${document.id}`;
 
   return (
     <Editor
@@ -33,6 +37,8 @@ export default async function DocumentPage({
       documentId={document.id}
       content={document.content}
       isSubmitted={submission?.submittedAt != null}
+      isAssignmentDocument={submission != null}
+      receiptHref={receiptHref}
     />
   );
 }
