@@ -15,8 +15,10 @@ import { isLegitimacyAnalysis, type LegitimacyAnalysis } from "@/lib/legitimacy-
 import { receiptLegitimacyAnalysisInstructions } from "@/lib/legitimacy-analysis-prompt";
 import {
   getLegitimacyAnalysisRefreshState,
-  hashDocumentBody,
-} from "@/lib/legitimacy-analysis.server";
+  isLegitimacyAnalysis,
+  type LegitimacyAnalysis,
+} from "@/lib/legitimacy-analysis";
+import { hashDocumentBody } from "@/lib/legitimacy-analysis.server";
 
 const ANALYSIS_MODEL = "gpt-5-nano";
 const MAX_CITATION_SIGNALS_PER_MILESTONE = 3;

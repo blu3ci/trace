@@ -12,8 +12,8 @@ import { ReceiptPreview } from "../../[submissionId]/DynamicReceiptPreview";
 import { LegitimacyAnalysisCard } from "@/components/receipt/legitimacy-analysis-card";
 import {
   getLegitimacyAnalysisRefreshState,
-  hashDocumentBody,
-} from "@/lib/legitimacy-analysis.server";
+} from "@/lib/legitimacy-analysis";
+import { hashDocumentBody } from "@/lib/legitimacy-analysis.server";
 
 export const revalidate = 0;
 
