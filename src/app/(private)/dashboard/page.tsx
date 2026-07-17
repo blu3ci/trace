@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { db } from "@/db";
 import { auth } from "@clerk/nextjs/server";
 import { Block } from "@blocknote/core";
-import { CalendarDays, CheckCircle2, ClipboardList, FilePlusCorner, FileText, Settings2 } from "lucide-react";
+import { ArrowRight, CalendarDays, CheckCircle2, ClipboardList, FilePlusCorner, FileText, Settings2 } from "lucide-react";
 import Link from "next/link";
 
 export const revalidate = 0;
@@ -57,6 +57,7 @@ export default async function DashboardPage() {
       <section aria-label="Documents">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <CreateDocument />
+          {documents.length === 0 && <GettingStarted />}
           {documents.map(({ id, title, content }) => (
             <Document
               key={id}
@@ -69,6 +70,22 @@ export default async function DashboardPage() {
         </div>
       </section>
     </div>
+  );
+}
+
+function GettingStarted() {
+  return (
+    <Card className="border-[#dbe3dc] bg-white sm:col-span-2">
+      <CardHeader><CardTitle>Start your first writing session</CardTitle><CardDescription>Trace keeps your draft, meaningful revisions, and receipt in one place.</CardDescription></CardHeader>
+      <CardContent>
+        <ol className="space-y-2 text-sm leading-6 text-[#607067]">
+          <li><span className="mr-2 font-semibold text-[#315943]">1.</span>Create a document and begin writing.</li>
+          <li><span className="mr-2 font-semibold text-[#315943]">2.</span>Save as you develop your ideas.</li>
+          <li><span className="mr-2 font-semibold text-[#315943]">3.</span>Open the receipt to revisit the writing journey.</li>
+        </ol>
+        <Button className="mt-5" variant="outline" nativeButton={false} render={<Link href="/dashboard/how-it-works" />}>How Trace works <ArrowRight data-icon="inline-end" /></Button>
+      </CardContent>
+    </Card>
   );
 }
 
