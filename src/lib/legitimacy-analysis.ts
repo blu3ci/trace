@@ -29,6 +29,10 @@ export type LegitimacyAnalysis = {
   recommendedNextStep: string;
 };
 
+export type LegitimacyAnalysisRefreshState =
+  | { canRefresh: true }
+  | { canRefresh: false; message: string };
+
 export function isLegitimacyAnalysis(value: unknown): value is LegitimacyAnalysis {
   if (!isRecord(value)) return false;
 

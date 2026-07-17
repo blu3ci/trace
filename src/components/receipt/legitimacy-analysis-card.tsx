@@ -6,32 +6,42 @@ import { BrainCircuit, CheckCircle2, CircleAlert, LoaderCircle, RefreshCw, Spark
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { generateReceiptLegitimacyAnalysis } from "@/server/actions/receipt-legitimacy-analysis";
-import type { LegitimacyAnalysis } from "@/lib/legitimacy-analysis";
+import { generateDocumentLegitimacyAnalysis } from "@/server/actions/receipt-legitimacy-analysis";
+import type {
+  LegitimacyAnalysis,
+  LegitimacyAnalysisRefreshState,
+} from "@/lib/legitimacy-analysis";
 
 type DisplayAnalysis = LegitimacyAnalysis & { generatedAt: string };
 
 export function LegitimacyAnalysisCard({
-  submissionId,
+  documentId,
   initialAnalysis,
+  initialRefreshState,
 }: {
-  submissionId: string;
+  documentId: string;
   initialAnalysis?: DisplayAnalysis;
+  initialRefreshState: LegitimacyAnalysisRefreshState;
 }) {
   const [analysis, setAnalysis] = useState<DisplayAnalysis | undefined>(initialAnalysis);
+  const [refreshState, setRefreshState] = useState(initialRefreshState);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   function runAnalysis() {
     setError(null);
     startTransition(async () => {
-      const result = await generateReceiptLegitimacyAnalysis(submissionId);
+      const result = await generateDocumentLegitimacyAnalysis(documentId);
       if (result.error) {
         setError(result.message);
         return;
       }
 
       setAnalysis({ ...result.analysis, generatedAt: result.generatedAt });
+      setRefreshState({
+        canRefresh: false,
+        message: "Edit and save the document body before refreshing this analysis.",
+      });
     });
   }
 
@@ -74,15 +84,16 @@ export function LegitimacyAnalysisCard({
 
             <div className="mt-4 flex flex-col gap-3 border-t border-[#dbe7de] pt-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm leading-5 text-[#607067]"><span className="font-medium text-[#3d5143]">Suggested next step:</span> {analysis.recommendedNextStep}</p>
-              <Button type="button" variant="outline" size="sm" disabled={isPending} onClick={runAnalysis} className="shrink-0">
+              <Button type="button" variant="outline" size="sm" disabled={isPending || !refreshState.canRefresh} onClick={runAnalysis} className="shrink-0">
                 {isPending ? <LoaderCircle className="animate-spin" /> : <RefreshCw />}
                 Refresh analysis
               </Button>
             </div>
+            {!refreshState.canRefresh && <p className="mt-3 text-sm text-[#607067]">{refreshState.message}</p>}
           </div>
         ) : (
           <div className="rounded-lg border border-dashed border-[#b9cfbd] bg-white/70 p-4 sm:flex sm:items-center sm:justify-between sm:gap-5">
-            <p className="text-sm leading-5 text-[#607067]">Generate a consistent score and evidence-based explanation from this receipt&apos;s writing milestones.</p>
+            <p className="text-sm leading-5 text-[#607067]">Generate a consistent score and evidence-based explanation from this document&apos;s writing milestones.</p>
             <Button type="button" className="mt-4 sm:mt-0" disabled={isPending} onClick={runAnalysis}>
               {isPending ? <LoaderCircle className="animate-spin" /> : <Sparkles />}
               {isPending ? "Analyzing milestones…" : "Analyze writing process"}

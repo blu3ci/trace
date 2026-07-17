@@ -12,6 +12,10 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.documentsTable.id,
       to: r.documentMilestonesTable.documentId,
     }),
+    legitimacyAnalysis: r.one.receiptLegitimacyAnalysesTable({
+      from: r.documentsTable.id,
+      to: r.receiptLegitimacyAnalysesTable.documentId,
+    }),
   },
   assignmentsTable: {
     members: r.many.assignmentMembersTable({
@@ -67,6 +71,10 @@ export const relations = defineRelations(schema, (r) => ({
     receipt: r.one.assignmentReceiptsTable({
       from: r.receiptLegitimacyAnalysesTable.receiptId,
       to: r.assignmentReceiptsTable.id,
+    }),
+    document: r.one.documentsTable({
+      from: r.receiptLegitimacyAnalysesTable.documentId,
+      to: r.documentsTable.id,
     }),
   },
 }));

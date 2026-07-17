@@ -11,8 +11,11 @@ import * as yup from "yup";
 import { db } from "@/db";
 import { receiptLegitimacyAnalysesTable } from "@/db/schema";
 import { receiptLegitimacyAnalysisSchema } from "@/formSchemas/receipt-legitimacy-analysis";
-import { canViewReceipt } from "@/lib/access-control";
 import { isLegitimacyAnalysis, type LegitimacyAnalysis } from "@/lib/legitimacy-analysis";
+import {
+  getLegitimacyAnalysisRefreshState,
+  hashDocumentBody,
+} from "@/lib/legitimacy-analysis.server";
 
 const ANALYSIS_MODEL = "gpt-5-nano";
 const MAX_FINAL_DOCUMENT_CHARACTERS = 24_000;
@@ -71,46 +74,55 @@ const legitimacyAnalysisSchema = {
   additionalProperties: false,
 } as const;
 
-export type GenerateReceiptLegitimacyAnalysisResult =
+export type GenerateDocumentLegitimacyAnalysisResult =
   | { error: false; analysis: LegitimacyAnalysis; generatedAt: string }
   | { error: true; message: string };
 
-export async function generateReceiptLegitimacyAnalysis(
-  unsafeSubmissionId: string,
-): Promise<GenerateReceiptLegitimacyAnalysisResult> {
+export async function generateDocumentLegitimacyAnalysis(
+  unsafeDocumentId: string,
+): Promise<GenerateDocumentLegitimacyAnalysisResult> {
   const { userId } = await auth();
   if (!userId) return { error: true, message: "Sign in again before running an analysis." };
 
-  let submissionId: string;
+  let documentId: string;
   try {
-    ({ submissionId } = await receiptLegitimacyAnalysisSchema.validate(
-      { submissionId: unsafeSubmissionId },
+    ({ documentId } = await receiptLegitimacyAnalysisSchema.validate(
+      { documentId: unsafeDocumentId },
       { stripUnknown: true },
     ));
   } catch (error) {
     if (error instanceof yup.ValidationError) {
-      return { error: true, message: "This receipt is no longer available." };
+      return { error: true, message: "This document is no longer available." };
     }
-    return { error: true, message: "We couldn’t validate this receipt." };
+    return { error: true, message: "We couldn’t validate this document." };
   }
 
-  const submission = await db.query.assignmentSubmissionsTable.findFirst({
-    where: { id: submissionId },
-    with: { assignment: true, receipt: true },
+  const document = await db.query.documentsTable.findFirst({
+    where: { id: documentId },
+    with: {
+      assignmentSubmission: { with: { assignment: true, receipt: true } },
+      legitimacyAnalysis: true,
+    },
   });
-  if (!submission?.assignment || !submission.receipt) {
-    return { error: true, message: "This receipt is no longer available." };
+  if (!document) {
+    return { error: true, message: "This document is no longer available." };
   }
-  if (!canViewReceipt({
-    viewerId: userId,
-    studentId: submission.clerkUserId,
-    assignmentOwnerId: submission.assignment.clerkUserId,
-  })) {
-    return { error: true, message: "You don’t have access to this receipt." };
+  const submission = document.assignmentSubmission;
+  const canViewDocument = document.clerkUserId === userId
+    || submission?.assignment?.clerkUserId === userId;
+  if (!canViewDocument) {
+    return { error: true, message: "You don’t have access to this document." };
   }
+
+  const contentHash = hashDocumentBody(document.content);
+  const refreshState = getLegitimacyAnalysisRefreshState({
+    analysis: document.legitimacyAnalysis,
+    contentHash,
+  });
+  if (!refreshState.canRefresh) return { error: true, message: refreshState.message };
 
   const milestones = await db.query.documentMilestonesTable.findMany({
-    where: { documentId: submission.documentId },
+    where: { documentId },
     orderBy: ({ createdAt }, { asc }) => asc(createdAt),
     columns: {
       activeSeconds: true,
@@ -143,8 +155,9 @@ export async function generateReceiptLegitimacyAnalysis(
         "Return two to four complementary explanations. Use needs_review only for an evidence gap that merits human context, not as an accusation.",
       ].join("\n"),
       input: JSON.stringify(buildAnalysisInput({
-        assignment: submission.assignment,
-        receipt: submission.receipt,
+        document,
+        assignment: submission?.assignment,
+        receipt: submission?.receipt,
         milestones,
       })),
       text: {
@@ -174,7 +187,7 @@ export async function generateReceiptLegitimacyAnalysis(
     if (!isLegitimacyAnalysis(parsed)) throw new Error("The response did not match the expected analysis format.");
     analysis = parsed;
   } catch (error) {
-    console.error("Unable to generate receipt legitimacy analysis", error);
+    console.error("Unable to generate document legitimacy analysis", error);
     return { error: true, message: "The AI analysis is unavailable right now. Please try again." };
   }
 
@@ -182,22 +195,27 @@ export async function generateReceiptLegitimacyAnalysis(
   await db
     .insert(receiptLegitimacyAnalysesTable)
     .values({
-      receiptId: submission.receipt.id,
+      documentId,
+      receiptId: submission?.receipt?.id,
+      contentHash,
       model: ANALYSIS_MODEL,
       analysis,
       createdAt: generatedAt,
       updatedAt: generatedAt,
     })
     .onConflictDoUpdate({
-      target: receiptLegitimacyAnalysesTable.receiptId,
+      target: receiptLegitimacyAnalysesTable.documentId,
       set: {
+        receiptId: submission?.receipt?.id,
+        contentHash,
         model: ANALYSIS_MODEL,
         analysis,
         updatedAt: generatedAt,
       },
     });
 
-  revalidatePath(`/receipts/${submissionId}`);
+  revalidatePath(`/receipts/document/${documentId}`);
+  if (submission?.receipt) revalidatePath(`/receipts/${submission.id}`);
   return { error: false, analysis, generatedAt: generatedAt.toISOString() };
 }
 
@@ -206,12 +224,14 @@ function getOpenAIClient(apiKey: string) {
 }
 
 function buildAnalysisInput({
+  document,
   assignment,
   receipt,
   milestones,
 }: {
-  assignment: { title: string; description: string | null };
-  receipt: { activeSeconds: number; finalContent: Block[]; finalWordCount: number; revisionCount: number };
+  document: { content: Block[] | null; title: string };
+  assignment?: { title: string; description: string | null } | null;
+  receipt?: { activeSeconds: number; finalContent: Block[]; finalWordCount: number; revisionCount: number } | null;
   milestones: Array<{
     activeSeconds: number;
     blockCount: number;
@@ -221,7 +241,8 @@ function buildAnalysisInput({
     wordCount: number;
   }>;
 }) {
-  const finalText = extractText(receipt.finalContent);
+  const finalContent = receipt?.finalContent ?? document.content ?? [];
+  const finalText = extractText(finalContent);
   const timeline = milestones.map((milestone, index) => {
     const text = extractText(milestone.content);
     const previous = milestones[index - 1];
@@ -242,18 +263,24 @@ function buildAnalysisInput({
 
   return {
     assignment: {
-      title: assignment.title,
-      description: assignment.description,
+      title: assignment?.title ?? document.title,
+      description: assignment?.description ?? null,
     },
     receipt: {
-      finalWordCount: receipt.finalWordCount,
-      revisionCount: receipt.revisionCount,
-      totalActiveSeconds: receipt.activeSeconds,
+      finalWordCount: receipt?.finalWordCount ?? countWords(finalText),
+      revisionCount: receipt?.revisionCount ?? milestones.length,
+      totalActiveSeconds: receipt?.activeSeconds
+        ?? milestones.reduce((total, milestone) => total + milestone.activeSeconds, 0),
       finalCitationSignals: extractCitationSignals(finalText, 12),
       finalDraftExcerpt: excerptFromStartAndEnd(finalText, MAX_FINAL_DOCUMENT_CHARACTERS),
     },
     milestones: timeline,
   };
+}
+
+function countWords(value: string) {
+  const normalized = value.replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  return normalized ? normalized.split(/\s+/).length : 0;
 }
 
 function extractCitationSignals(value: string, limit = MAX_CITATION_SIGNALS_PER_MILESTONE) {

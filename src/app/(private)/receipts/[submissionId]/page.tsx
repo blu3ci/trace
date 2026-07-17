@@ -12,6 +12,10 @@ import { RevisionComparisonLink } from "@/components/receipt/revision-comparison
 import { ReceiptPreview } from "./DynamicReceiptPreview";
 import { InstructorReceiptSelector } from "./instructor-receipt-selector";
 import { LegitimacyAnalysisCard } from "@/components/receipt/legitimacy-analysis-card";
+import {
+  getLegitimacyAnalysisRefreshState,
+  hashDocumentBody,
+} from "@/lib/legitimacy-analysis.server";
 
 export const revalidate = 0;
 
@@ -22,9 +26,9 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
   const { submissionId } = await params;
   const submission = await db.query.assignmentSubmissionsTable.findFirst({
     where: { id: submissionId },
-    with: { assignment: true, receipt: { with: { legitimacyAnalysis: true } } },
+    with: { assignment: true, receipt: true, document: { with: { legitimacyAnalysis: true } } },
   });
-  if (!submission?.assignment || !submission.receipt) notFound();
+  if (!submission?.assignment || !submission.receipt || !submission.document) notFound();
 
   const isInstructor = submission.assignment.clerkUserId === userId;
   if (!canViewReceipt({ viewerId: userId, studentId: submission.clerkUserId, assignmentOwnerId: submission.assignment.clerkUserId })) notFound();
@@ -107,10 +111,14 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
 
         <div className="mt-8">
           <LegitimacyAnalysisCard
-            submissionId={submission.id}
-            initialAnalysis={receipt.legitimacyAnalysis
-              ? { ...receipt.legitimacyAnalysis.analysis, generatedAt: receipt.legitimacyAnalysis.updatedAt.toISOString() }
+            documentId={submission.documentId}
+            initialAnalysis={submission.document.legitimacyAnalysis
+              ? { ...submission.document.legitimacyAnalysis.analysis, generatedAt: submission.document.legitimacyAnalysis.updatedAt.toISOString() }
               : undefined}
+            initialRefreshState={getLegitimacyAnalysisRefreshState({
+              analysis: submission.document.legitimacyAnalysis,
+              contentHash: hashDocumentBody(submission.document.content),
+            })}
           />
         </div>
 

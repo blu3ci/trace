@@ -9,6 +9,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/db";
 import { RevisionComparisonLink } from "@/components/receipt/revision-comparison-link";
 import { ReceiptPreview } from "../../[submissionId]/DynamicReceiptPreview";
+import { LegitimacyAnalysisCard } from "@/components/receipt/legitimacy-analysis-card";
+import {
+  getLegitimacyAnalysisRefreshState,
+  hashDocumentBody,
+} from "@/lib/legitimacy-analysis.server";
 
 export const revalidate = 0;
 
@@ -19,6 +24,7 @@ export default async function DocumentReceiptPage({ params }: { params: Promise<
   const { documentId } = await params;
   const document = await db.query.documentsTable.findFirst({
     where: { id: documentId, clerkUserId: userId },
+    with: { legitimacyAnalysis: true },
   });
   if (!document) notFound();
 
@@ -46,6 +52,19 @@ export default async function DocumentReceiptPage({ params }: { params: Promise<
           <ReceiptStat icon={Clock3} label="Active writing time" value={formatDuration(activeSeconds)} />
           <ReceiptStat icon={History} label="Revision milestones" value={String(milestones.length)} />
           <ReceiptStat icon={PencilLine} label="Current word count" value={countWords(document.content).toLocaleString()} />
+        </div>
+
+        <div className="mt-8">
+          <LegitimacyAnalysisCard
+            documentId={document.id}
+            initialAnalysis={document.legitimacyAnalysis
+              ? { ...document.legitimacyAnalysis.analysis, generatedAt: document.legitimacyAnalysis.updatedAt.toISOString() }
+              : undefined}
+            initialRefreshState={getLegitimacyAnalysisRefreshState({
+              analysis: document.legitimacyAnalysis,
+              contentHash: hashDocumentBody(document.content),
+            })}
+          />
         </div>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[0.72fr_1.28fr]">

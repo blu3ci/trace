@@ -151,12 +151,18 @@ export const receiptLegitimacyAnalysesTable = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     receiptId: uuid("receipt_id")
-      .notNull()
       .references(() => assignmentReceiptsTable.id, { onDelete: "cascade" }),
+    documentId: uuid("document_id")
+      .notNull()
+      .references(() => documentsTable.id, { onDelete: "cascade" }),
+    contentHash: varchar("content_hash", { length: 64 }).notNull(),
     model: varchar("model", { length: 64 }).notNull(),
     analysis: json("analysis").$type<LegitimacyAnalysis>().notNull(),
     createdAt,
     updatedAt,
   },
-  (t) => [uniqueIndex("receipt_legitimacy_analyses_receipt_id_idx").on(t.receiptId)],
+  (t) => [
+    uniqueIndex("receipt_legitimacy_analyses_receipt_id_idx").on(t.receiptId),
+    uniqueIndex("receipt_legitimacy_analyses_document_id_idx").on(t.documentId),
+  ],
 );
