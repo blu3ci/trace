@@ -250,6 +250,30 @@ export default function Editor({
     editor.insertInlineContent("    ");
   };
 
+  const deleteTabSpaces = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Backspace" || event.altKey || event.ctrlKey || event.metaKey) return;
+
+    const deletedTab = editor.exec((state, dispatch) => {
+      if (!state.selection.empty || state.selection.$from.parentOffset < 4) return false;
+
+      const cursor = state.selection.from;
+      if (state.doc.textBetween(cursor - 4, cursor) !== "    ") return false;
+
+      if (dispatch) dispatch(state.tr.delete(cursor - 4, cursor));
+      return true;
+    });
+
+    if (deletedTab) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  };
+
+  const handleEditorKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    insertTabSpaces(event);
+    deleteTabSpaces(event);
+  };
+
   // Renders the editor instance using a React component.
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -281,7 +305,7 @@ export default function Editor({
               if (!isSubmitted) recordEditingActivity();
             }}
             onPaste={recordBulkPaste}
-            onKeyDownCapture={insertTabSpaces}
+            onKeyDownCapture={handleEditorKeyDown}
             sideMenu={false}
             comments={false}
           />
