@@ -11,6 +11,7 @@ import {
   primaryKey,
   uniqueIndex,
   varchar,
+  pgEnum,
 } from "drizzle-orm/pg-core";
 
 const createdAt = timestamp("created_at").defaultNow().notNull();
@@ -18,6 +19,17 @@ const updatedAt = timestamp("updated_at")
   .defaultNow()
   .notNull()
   .$onUpdate(() => new Date());
+
+export const userRoleEnum = pgEnum("user_role", ["student", "instructor"]);
+
+export const userRolesTable = pgTable(
+  "user_roles",
+  {
+    clerkUserId: text("clerk_user_id").primaryKey(),
+    role: userRoleEnum("role").notNull(),
+    createdAt,
+  },
+);
 
 export const documentsTable = pgTable(
   "documents",

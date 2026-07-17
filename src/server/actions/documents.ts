@@ -20,6 +20,7 @@ import "server-only";
 import { Block } from "@blocknote/core";
 import { assignmentSubmissionSchema, attachDocumentToAssignmentSchema } from "@/formSchemas/assignment";
 import { randomUUID } from "node:crypto";
+import { hasUserRole } from "@/lib/user-role";
 
 function isEditableDocument(documentId: string) {
   return notExists(
@@ -40,6 +41,7 @@ export async function createAssignmentSubmission(
 ): Promise<void> {
   const { userId } = await auth();
   if (!userId) return;
+  if (!(await hasUserRole(userId, "student"))) return;
 
   let assignmentId: string;
   try {
@@ -104,6 +106,7 @@ export async function attachDocumentToAssignment(
 ): Promise<{ error: boolean; message?: string }> {
   const { userId } = await auth();
   if (!userId) return { error: true, message: "Sign in again before attaching this document." };
+  if (!(await hasUserRole(userId, "student"))) return { error: true, message: "Only student accounts can attach a document to an assignment." };
 
   let documentId: string;
   let assignmentId: string;
@@ -167,6 +170,7 @@ export async function submitAssignmentSubmission(
 ): Promise<{ error: boolean; receiptHref?: string }> {
   const { userId } = await auth();
   if (!userId) return { error: true };
+  if (!(await hasUserRole(userId, "student"))) return { error: true };
 
   let assignmentId: string;
   try {

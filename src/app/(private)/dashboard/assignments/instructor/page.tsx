@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { Archive, ClipboardList, Plus, UsersRound } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/db";
@@ -8,12 +9,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { AssignmentForm } from "../assignment-form";
 import { DueDate } from "../page";
 import { AssignmentCode } from "./assignment-code";
+import { hasUserRole } from "@/lib/user-role";
 
 export const revalidate = 0;
 
 export default async function InstructorAssignmentsPage() {
   const { userId, redirectToSignIn } = await auth();
   if (!userId) return redirectToSignIn();
+  if (!(await hasUserRole(userId, "instructor"))) redirect("/dashboard");
 
   const assignments = await db.query.assignmentsTable.findMany({
     where: { clerkUserId: userId },

@@ -1,15 +1,13 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { getUserRole } from "@/lib/user-role";
 
-export default async function PrivateLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+import { getUserRole } from "@/lib/user-role";
+import { RoleSelectionForm } from "./role-selection-form";
+
+export default async function OnboardingPage() {
   const { userId, redirectToSignIn } = await auth();
   if (!userId) return redirectToSignIn();
-  if (!(await getUserRole(userId))) redirect("/onboarding");
+  if (await getUserRole(userId)) redirect("/dashboard");
 
-  return children;
+  return <RoleSelectionForm />;
 }

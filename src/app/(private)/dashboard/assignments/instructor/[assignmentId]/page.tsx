@@ -12,6 +12,7 @@ import { DueDate, formatDate } from "../../page";
 import { AssignmentCode } from "../assignment-code";
 import { AssignmentForm } from "../../assignment-form";
 import { ArchiveAssignmentButton } from "./archive-assignment-button";
+import { hasUserRole } from "@/lib/user-role";
 
 export const revalidate = 0;
 
@@ -22,6 +23,7 @@ export default async function AssignmentSubmissionsPage({
 }) {
   const { userId, redirectToSignIn } = await auth();
   if (!userId) return redirectToSignIn();
+  if (!(await hasUserRole(userId, "instructor"))) notFound();
 
   const { assignmentId } = await params;
   const assignment = await db.query.assignmentsTable.findFirst({

@@ -1,6 +1,7 @@
 import { auth } from "@clerk/nextjs/server";
 import { CalendarDays, CheckCircle2, ClipboardList, FilePenLine, FilePlus, KeyRound, Tag } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   Card,
   CardContent,
@@ -17,12 +18,14 @@ import {
   submitAssignmentSubmissionFromForm,
 } from "@/server/actions/documents";
 import { JoinAssignmentForm } from "./join-assignment-form";
+import { hasUserRole } from "@/lib/user-role";
 
 export const revalidate = 0;
 
 export default async function AssignmentsPage() {
   const { userId, redirectToSignIn } = await auth();
   if (!userId) return redirectToSignIn();
+  if (!(await hasUserRole(userId, "student"))) redirect("/dashboard");
 
   const memberships = await db.query.assignmentMembersTable.findMany({ where: { clerkUserId: userId } });
   const assignmentIds = memberships.map((membership) => membership.assignmentId);
@@ -65,17 +68,6 @@ export default async function AssignmentsPage() {
               <CardDescription>Enter the code shared by your instructor.</CardDescription>
             </CardHeader>
             <CardContent><JoinAssignmentForm /></CardContent>
-            </Card>
-            <Card className="border-[#dbe3dc]">
-            <CardHeader>
-              <CardTitle>Teaching a class?</CardTitle>
-              <CardDescription>Create assignments and see which students have joined them in your instructor space.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Button variant="outline" nativeButton={false} render={<Link href="/dashboard/assignments/instructor" />}>
-                Instructor assignments
-              </Button>
-            </CardContent>
             </Card>
         </div>
 

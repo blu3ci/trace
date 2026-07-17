@@ -10,6 +10,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { assignmentMembersTable, assignmentsTable } from "@/db/schema";
 import { canJoinAssignment } from "@/lib/access-control";
+import { hasUserRole } from "@/lib/user-role";
 import {
   assignmentSubmissionSchema,
   joinAssignmentSchema,
@@ -23,6 +24,7 @@ export async function createAssignment(
 ): Promise<{ error: boolean }> {
   const { userId } = await auth();
   if (!userId) return { error: true };
+  if (!(await hasUserRole(userId, "instructor"))) return { error: true };
 
   try {
     const { title, course, description, dueDate } = await newAssignmentSchema.validate(unsafeData);
@@ -60,6 +62,7 @@ export async function joinAssignment(
 ): Promise<{ error: boolean; message?: string }> {
   const { userId } = await auth();
   if (!userId) return { error: true, message: "Sign in again before joining an assignment." };
+  if (!(await hasUserRole(userId, "student"))) return { error: true, message: "Only student accounts can join assignments." };
 
   try {
     const { accessCode } = await joinAssignmentSchema.validate(unsafeData);
@@ -95,6 +98,7 @@ export async function updateAssignment(
 ): Promise<{ error: boolean }> {
   const { userId } = await auth();
   if (!userId) return { error: true };
+  if (!(await hasUserRole(userId, "instructor"))) return { error: true };
 
   try {
     const { assignmentId, course, description, dueDate, title } = await updateAssignmentSchema.validate({
@@ -127,6 +131,7 @@ export async function updateAssignment(
 export async function archiveAssignment(unsafeAssignmentId: string): Promise<{ error: boolean }> {
   const { userId } = await auth();
   if (!userId) return { error: true };
+  if (!(await hasUserRole(userId, "instructor"))) return { error: true };
 
   try {
     const { assignmentId } = await assignmentSubmissionSchema.validate({ assignmentId: unsafeAssignmentId });
@@ -153,6 +158,7 @@ export async function regenerateAssignmentAccessCode(
 ): Promise<{ code?: string; error: boolean }> {
   const { userId } = await auth();
   if (!userId) return { error: true };
+  if (!(await hasUserRole(userId, "instructor"))) return { error: true };
 
   let assignmentId: string;
   try {
@@ -189,6 +195,7 @@ export async function regenerateAssignmentAccessCode(
 export async function deleteAssignment(unsafeAssignmentId: string): Promise<{ error: boolean } | undefined> {
   const { userId } = await auth();
   if (!userId) return { error: true };
+  if (!(await hasUserRole(userId, "instructor"))) return { error: true };
 
   try {
     const { assignmentId } = await assignmentSubmissionSchema.validate({ assignmentId: unsafeAssignmentId });
