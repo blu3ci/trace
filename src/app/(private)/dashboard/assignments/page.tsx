@@ -43,7 +43,8 @@ export default async function AssignmentsPage() {
     submissions.map((submission) => [submission.assignmentId, submission]),
   );
   const today = new Date().toISOString().slice(0, 10);
-  const upcomingCount = assignments.filter((assignment) => assignment.dueDate && assignment.dueDate >= today).length;
+  const activeAssignments = assignments.filter((assignment) => !assignment.archivedAt);
+  const upcomingCount = activeAssignments.filter((assignment) => assignment.dueDate && assignment.dueDate >= today).length;
 
   return (
     <div className="container mx-auto flex max-w-6xl flex-col px-5 sm:px-8 lg:h-[calc(100dvh-5rem)] lg:overflow-hidden">
@@ -83,7 +84,7 @@ export default async function AssignmentsPage() {
             <div>
               <p className="font-semibold">Your workload</p>
               <p className="mt-0.5 text-sm text-muted-foreground">
-                {assignments.length === 0 ? "No assignments yet" : `${assignments.length} joined · ${upcomingCount} upcoming`}
+                {activeAssignments.length === 0 ? "No assignments yet" : `${activeAssignments.length} joined · ${upcomingCount} upcoming`}
               </p>
             </div>
             <span className="grid size-10 place-items-center rounded-full bg-[#e5f1e8] text-[#315943]"><ClipboardList className="size-5" /></span>
@@ -91,7 +92,7 @@ export default async function AssignmentsPage() {
 
           <ScrollArea className="-mx-1 h-[min(55dvh,32rem)] lg:min-h-0 lg:h-auto lg:flex-1">
             <div className="flex flex-col gap-4 p-1">
-              {assignments.length === 0 ? (
+              {activeAssignments.length === 0 ? (
                 <Card className="border-dashed border-[#cfd8d0] bg-[#fbfcfa] py-14 text-center">
                   <CardContent className="flex flex-col items-center">
                     <span className="grid size-12 place-items-center rounded-full bg-[#e9f0e9] text-[#567160]"><ClipboardList className="size-6" /></span>
@@ -99,7 +100,7 @@ export default async function AssignmentsPage() {
                     <CardDescription className="mt-2 max-w-sm">Join an assignment with an instructor’s code to see it here.</CardDescription>
                   </CardContent>
                 </Card>
-              ) : assignments.map((assignment) => {
+              ) : activeAssignments.map((assignment) => {
                 const isOverdue = assignment.dueDate ? assignment.dueDate < today : false;
                 const submission = submissionsByAssignment.get(assignment.id);
                 return (
@@ -122,8 +123,8 @@ export default async function AssignmentsPage() {
                           </Button>
                           {submission.submittedAt ? (
                             <>
-                              <Badge className="bg-[#e5f1e8] text-[#315943]">
-                                <CheckCircle2 /> Submitted
+                              <Badge className={isLateSubmission(submission.submittedAt, assignment.dueDate) ? "bg-[#fbe9e7] text-[#9b332a]" : "bg-[#e5f1e8] text-[#315943]"}>
+                                <CheckCircle2 /> {isLateSubmission(submission.submittedAt, assignment.dueDate) ? "Submitted late" : "Submitted"}
                               </Badge>
                               {submission.receipt && <Button variant="outline" nativeButton={false} render={<Link href={`/receipts/${submission.id}`} />}>View receipt</Button>}
                             </>
@@ -158,8 +159,12 @@ export function DueDate({ dueDate, isOverdue }: { dueDate: string | null; isOver
   if (!dueDate) return <span className="rounded-full bg-[#f0f1ef] px-2.5 py-1 text-xs font-medium text-[#69756d]">No due date</span>;
 
   return <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${isOverdue ? "bg-[#fbe9e7] text-[#9b332a]" : "bg-[#e5f1e8] text-[#315943]"}`}>
-    <CalendarDays className="size-3.5" /> {isOverdue ? "Overdue" : `Due ${formatDate(dueDate)}`}
+    <CalendarDays className="size-3.5" /> {isOverdue ? "Overdue" : dueDate === new Date().toISOString().slice(0, 10) ? "Due today" : `Due ${formatDate(dueDate)}`}
   </span>;
+}
+
+function isLateSubmission(submittedAt: Date | null, dueDate: string | null) {
+  return Boolean(submittedAt && dueDate && submittedAt.toISOString().slice(0, 10) > dueDate);
 }
 
 export function formatDate(value: string) {

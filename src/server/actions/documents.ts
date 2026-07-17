@@ -61,11 +61,11 @@ export async function createAssignmentSubmission(
     }),
     db.query.assignmentsTable.findFirst({
       where: { id: assignmentId },
-      columns: { title: true },
+      columns: { title: true, archivedAt: true },
     }),
   ]);
 
-  if (!membership || !assignment) return;
+  if (!membership || !assignment || assignment.archivedAt) return;
   if (existingSubmission) redirect(`/document/${existingSubmission.documentId}`);
 
   const documentId = randomUUID();
@@ -116,7 +116,7 @@ export async function attachDocumentToAssignment(
     return { error: true };
   }
 
-  const [document, membership, existingDocumentSubmission, existingAssignmentSubmission] = await Promise.all([
+  const [document, membership, assignment, existingDocumentSubmission, existingAssignmentSubmission] = await Promise.all([
     db.query.documentsTable.findFirst({
       where: { id: documentId, clerkUserId: userId },
       columns: { id: true },
@@ -124,6 +124,10 @@ export async function attachDocumentToAssignment(
     db.query.assignmentMembersTable.findFirst({
       where: { assignmentId, clerkUserId: userId },
       columns: { assignmentId: true },
+    }),
+    db.query.assignmentsTable.findFirst({
+      where: { id: assignmentId },
+      columns: { archivedAt: true },
     }),
     db.query.assignmentSubmissionsTable.findFirst({
       where: { documentId },
@@ -135,7 +139,7 @@ export async function attachDocumentToAssignment(
     }),
   ]);
 
-  if (!document || !membership || existingDocumentSubmission || existingAssignmentSubmission) {
+  if (!document || !membership || !assignment || assignment.archivedAt || existingDocumentSubmission || existingAssignmentSubmission) {
     return { error: true };
   }
 

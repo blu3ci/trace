@@ -1,5 +1,5 @@
 import { auth, clerkClient } from "@clerk/nextjs/server";
-import { ArrowLeft, CheckCircle2, Clock3, FileCheck2, UserRoundX, UsersRound } from "lucide-react";
+import { Archive, ArrowLeft, CheckCircle2, Clock3, FileCheck2, UserRoundX, UsersRound } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -10,7 +10,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { db } from "@/db";
 import { DueDate, formatDate } from "../../page";
 import { AssignmentCode } from "../assignment-code";
-import { DeleteAssignmentButton } from "./delete-assignment-button";
+import { AssignmentForm } from "../../assignment-form";
+import { ArchiveAssignmentButton } from "./archive-assignment-button";
 
 export const revalidate = 0;
 
@@ -64,13 +65,20 @@ export default async function AssignmentSubmissionsPage({
           <div>
             <h1 className="text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">{assignment.title}</h1>
             <p className="mt-2 text-[#65716a]">Review submitted work and open each student’s verified receipt.</p>
-            <div className="mt-4 rounded-lg border border-[#dbe3dc] bg-white px-3 py-2.5 w-fit"><AssignmentCode code={assignment.accessCode} /></div>
+            {assignment.archivedAt ? (
+              <div className="mt-4 inline-flex items-center gap-2 rounded-lg border border-[#e8c8c4] bg-[#fbe9e7] px-3 py-2 text-sm font-medium text-[#9b332a]"><Archive className="size-4" /> Archived</div>
+            ) : <div className="mt-4 rounded-lg border border-[#dbe3dc] bg-white px-3 py-2.5 w-fit"><AssignmentCode code={assignment.accessCode} assignmentId={assignment.id} /></div>}
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <DueDate dueDate={assignment.dueDate} isOverdue={assignment.dueDate ? assignment.dueDate < today : false} />
-            <DeleteAssignmentButton assignmentId={assignment.id} title={assignment.title} />
+            {!assignment.archivedAt && <ArchiveAssignmentButton assignmentId={assignment.id} title={assignment.title} />}
           </div>
         </div>
+
+        {!assignment.archivedAt && <details className="mt-8 rounded-xl border border-[#dbe3dc] bg-white">
+          <summary className="cursor-pointer px-5 py-4 font-medium marker:text-[#315943]">Edit assignment details</summary>
+          <div className="border-t border-[#e7ebe7] p-5"><AssignmentForm assignment={assignment} /></div>
+        </details>}
 
         <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <SubmissionSummary icon={UsersRound} label="Students" count={assignment.members.length} tone="neutral" />

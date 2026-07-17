@@ -42,6 +42,7 @@ export const assignmentsTable = pgTable(
     description: text("description"),
     dueDate: date("due_date"),
     accessCode: varchar("access_code", { length: 8 }).notNull(),
+    archivedAt: timestamp("archived_at"),
     createdAt,
     updatedAt,
   },

@@ -52,6 +52,10 @@ export const assignmentSubmissionSchema = yup
   })
   .required();
 
+export const updateAssignmentSchema = newAssignmentSchema
+  .concat(assignmentSubmissionSchema)
+  .required();
+
 export const attachDocumentToAssignmentSchema = assignmentSubmissionSchema
   .concat(
     yup.object({

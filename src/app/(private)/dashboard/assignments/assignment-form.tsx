@@ -4,7 +4,7 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import { Controller, useForm } from "react-hook-form";
 import * as yup from "yup";
 import { format } from "date-fns";
-import { CalendarIcon, Plus } from "lucide-react";
+import { CalendarIcon, Plus, Save } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -13,30 +13,35 @@ import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { newAssignmentSchema } from "@/formSchemas/assignment";
-import { createAssignment } from "@/server/actions/assignments";
+import { createAssignment, updateAssignment } from "@/server/actions/assignments";
 
-export function AssignmentForm() {
+type AssignmentFormProps = {
+  assignment?: { id: string; title: string; course: string | null; dueDate: string | null; description: string | null };
+};
+
+export function AssignmentForm({ assignment }: AssignmentFormProps) {
+  const isEditing = Boolean(assignment);
   const form = useForm({
     resolver: yupResolver(newAssignmentSchema),
     defaultValues: {
-      title: "",
-      course: "",
-      dueDate: "",
-      description: "",
+      title: assignment?.title ?? "",
+      course: assignment?.course ?? "",
+      dueDate: assignment?.dueDate ?? "",
+      description: assignment?.description ?? "",
     },
   });
 
   async function onSubmit(values: yup.InferType<typeof newAssignmentSchema>) {
-    const data = await createAssignment(values);
+    const data = assignment ? await updateAssignment(assignment.id, values) : await createAssignment(values);
 
     if (data?.error) {
       form.setError("root", {
-        message: "There was an error adding your assignment",
+        message: `There was an error ${isEditing ? "saving" : "adding"} your assignment`,
       });
       return;
     }
 
-    form.reset();
+    form.reset(isEditing ? values : undefined);
   }
 
   return (
@@ -113,7 +118,7 @@ export function AssignmentForm() {
           )}
         />
         <Button type="submit" className="w-full bg-[#315943] hover:bg-[#254735]" disabled={form.formState.isSubmitting}>
-          Add assignment <Plus data-icon="inline-end" />
+          {isEditing ? "Save assignment" : "Add assignment"} {isEditing ? <Save data-icon="inline-end" /> : <Plus data-icon="inline-end" />}
         </Button>
       </FieldGroup>
     </form>
