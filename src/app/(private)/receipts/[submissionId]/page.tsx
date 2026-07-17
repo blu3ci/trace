@@ -6,6 +6,7 @@ import { Block } from "@blocknote/core";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/db";
+import { canViewReceipt } from "@/lib/access-control";
 import { ReceiptPdfDownloadButton } from "@/components/receipt/receipt-pdf-download-button";
 import { RevisionComparisonLink } from "@/components/receipt/revision-comparison-link";
 import { ReceiptPreview } from "./DynamicReceiptPreview";
@@ -24,9 +25,8 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
   });
   if (!submission?.assignment || !submission.receipt) notFound();
 
-  const isStudent = submission.clerkUserId === userId;
   const isInstructor = submission.assignment.clerkUserId === userId;
-  if (!isStudent && !isInstructor) notFound();
+  if (!canViewReceipt({ viewerId: userId, studentId: submission.clerkUserId, assignmentOwnerId: submission.assignment.clerkUserId })) notFound();
 
   const milestones = await db.query.documentMilestonesTable.findMany({
     where: { documentId: submission.documentId },

@@ -48,6 +48,7 @@ import {
 } from "@/server/actions/documents";
 import { updateDocumentTitleSchema } from "@/formSchemas/document";
 import { attachDocumentToAssignmentSchema } from "@/formSchemas/assignment";
+import { canEditDocument } from "@/lib/access-control";
 
 export function DocumentSettingsForm({
   documentId,
@@ -64,6 +65,7 @@ export function DocumentSettingsForm({
   attachedAssignmentTitle?: string;
   availableAssignments: Array<{ id: string; label: string }>;
 }) {
+  const isEditable = canEditDocument(isSubmitted ? new Date() : null);
   const router = useRouter();
   const form = useForm({
     resolver: yupResolver(updateDocumentTitleSchema),
@@ -132,7 +134,7 @@ export function DocumentSettingsForm({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {isSubmitted ? (
+          {!isEditable ? (
             <p className="rounded-lg border border-[#bfd0c2] bg-[#f7faf7] px-3 py-2 text-sm text-[#315943]">
               Submitted documents are locked and can’t be renamed or deleted.
             </p>
@@ -170,7 +172,7 @@ export function DocumentSettingsForm({
               errors={[form.formState.errors.root]}
             />
           )}
-          {!isSubmitted && (
+          {isEditable && (
             <section className="mt-8 border-t pt-6">
               <div className="flex items-start gap-2">
                 <ClipboardList className="mt-0.5 size-4 text-[#567160]" />
@@ -225,7 +227,7 @@ export function DocumentSettingsForm({
         <CardFooter className="flex flex-wrap justify-between gap-3">
           <AlertDialog>
             <AlertDialogTrigger
-              disabled={isSubmitted || form.formState.isSubmitting}
+              disabled={!isEditable || form.formState.isSubmitting}
               render={<Button variant="destructive" />}
             >
               <Trash2 /> Delete document
@@ -255,7 +257,7 @@ export function DocumentSettingsForm({
           <Button
             type="submit"
             form="document-settings-form"
-            disabled={isSubmitted || form.formState.isSubmitting}
+            disabled={!isEditable || form.formState.isSubmitting}
           >
             Save changes
           </Button>

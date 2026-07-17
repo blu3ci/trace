@@ -9,6 +9,7 @@ import { redirect } from "next/navigation";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@/db";
 import { assignmentMembersTable, assignmentsTable } from "@/db/schema";
+import { canJoinAssignment } from "@/lib/access-control";
 import {
   assignmentSubmissionSchema,
   joinAssignmentSchema,
@@ -70,8 +71,10 @@ export async function joinAssignment(
     });
 
     if (!assignment) return { error: true, message: "We couldn’t find an assignment with that code." };
-    if (assignment.archivedAt) return { error: true, message: "This assignment is no longer accepting students." };
-    if (assignment.clerkUserId === userId) return { error: true, message: "You created this assignment. Open it from Instructor Assignments." };
+    if (!canJoinAssignment({ assignmentArchivedAt: assignment.archivedAt, assignmentOwnerId: assignment.clerkUserId, viewerId: userId })) {
+      if (assignment.archivedAt) return { error: true, message: "This assignment is no longer accepting students." };
+      return { error: true, message: "You created this assignment. Open it from Instructor Assignments." };
+    }
 
     await db
       .insert(assignmentMembersTable)

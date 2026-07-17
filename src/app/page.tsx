@@ -120,6 +120,9 @@ export default async function Home() {
                 >
                   Start a writing session <ArrowRight data-icon="inline-end" />
                 </Button>
+                <Button size="lg" variant="outline" className="h-11 rounded-xl px-5 text-sm" nativeButton={false} render={<Link href="/demo" />}>
+                  View demo
+                </Button>
                 <a
                   href="#how-it-works"
                   className="inline-flex h-11 items-center justify-center rounded-xl px-4 text-sm font-medium text-[#405049] transition-colors hover:bg-[#eff2ec]"
