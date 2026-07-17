@@ -11,11 +11,12 @@ import * as yup from "yup";
 import { db } from "@/db";
 import { receiptLegitimacyAnalysesTable } from "@/db/schema";
 import { receiptLegitimacyAnalysisSchema } from "@/formSchemas/receipt-legitimacy-analysis";
-import { isLegitimacyAnalysis, type LegitimacyAnalysis } from "@/lib/legitimacy-analysis";
 import {
   getLegitimacyAnalysisRefreshState,
-  hashDocumentBody,
-} from "@/lib/legitimacy-analysis.server";
+  isLegitimacyAnalysis,
+  type LegitimacyAnalysis,
+} from "@/lib/legitimacy-analysis";
+import { hashDocumentBody } from "@/lib/legitimacy-analysis.server";
 
 const ANALYSIS_MODEL = "gpt-5-nano";
 const MAX_FINAL_DOCUMENT_CHARACTERS = 24_000;
