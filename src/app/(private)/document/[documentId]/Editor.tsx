@@ -44,6 +44,7 @@ import {
 import { PDFExporter } from "@blocknote/xl-pdf-exporter";
 import { pdf } from "@react-pdf/renderer";
 import { Block, BlockNoteEditor } from "@blocknote/core";
+import { en } from "@blocknote/core/locales";
 import { Input } from "@/components/ui/input";
 import { documentPdfSchemaMappings } from "@/lib/document-pdf";
 import {
@@ -93,6 +94,13 @@ export default function Editor({
   const editor = useCreateBlockNote({
     autofocus: true,
     initialContent: content ?? undefined,
+    dictionary: {
+      ...en,
+      placeholders: {
+        ...en.placeholders,
+        default: "Enter text or type '/' for commands. Highlight text to show more options.",
+      },
+    },
     _tiptapOptions: {
       editorProps: {
         handleKeyDown: (view, event) => {
