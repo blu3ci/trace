@@ -24,6 +24,7 @@ import "@blocknote/shadcn/style.css";
 import {
   AlignCenter,
   AlignLeft,
+  AlignRight,
   ArrowLeft,
   Bold,
   CheckCircle2,
@@ -602,6 +603,9 @@ function DocumentToolbar({ editor }: { editor: BlockNoteEditor }) {
           <ToolbarButton label="Center align" pressed={state.textAlignment === "center"} onClick={() => updateTextAlignment(editor, "center")}>
             <AlignCenter />
           </ToolbarButton>
+          <ToolbarButton label="Align right" pressed={state.textAlignment === "right"} onClick={() => updateTextAlignment(editor, "right")}>
+            <AlignRight />
+          </ToolbarButton>
           <ToolbarDivider />
           <ToolbarButton label="Decrease indentation (Shift+Tab)" disabled={!state.canOutdent} onClick={() => { focusEditor(); editor.unnestBlock(); }}>
             <ListIndentDecrease />
@@ -680,7 +684,7 @@ function getToolbarState(editor: BlockNoteEditor) {
   };
 }
 
-function updateTextAlignment(editor: BlockNoteEditor, textAlignment: "left" | "center") {
+function updateTextAlignment(editor: BlockNoteEditor, textAlignment: "left" | "center" | "right") {
   editor.focus();
   editor.updateBlock(editor.getTextCursorPosition().block, { props: { textAlignment } });
 }
