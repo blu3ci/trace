@@ -11,7 +11,6 @@ import * as yup from "yup";
 import { db } from "@/db";
 import { receiptLegitimacyAnalysesTable } from "@/db/schema";
 import { receiptLegitimacyAnalysisSchema } from "@/formSchemas/receipt-legitimacy-analysis";
-import { isLegitimacyAnalysis, type LegitimacyAnalysis } from "@/lib/legitimacy-analysis";
 import { receiptLegitimacyAnalysisInstructions } from "@/lib/legitimacy-analysis-prompt";
 import {
   getLegitimacyAnalysisRefreshState,
