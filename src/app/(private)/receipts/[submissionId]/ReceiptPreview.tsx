@@ -6,10 +6,11 @@ import "@blocknote/shadcn/style.css";
 import { Block, BlockNoteEditor } from "@blocknote/core";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/shadcn";
-import { PDFExporter, pdfDefaultSchemaMappings } from "@blocknote/xl-pdf-exporter";
+import { PDFExporter } from "@blocknote/xl-pdf-exporter";
 import { pdf } from "@react-pdf/renderer";
 import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { documentPdfSchemaMappings } from "@/lib/document-pdf";
 
 export default function ReceiptPreview({ content, title, label = "Final submitted document" }: { content: Block[]; title: string; label?: string }) {
   const hasSavedContent = content.length > 0;
@@ -35,7 +36,7 @@ export default function ReceiptPreview({ content, title, label = "Final submitte
 }
 
 async function exportPdf(editor: BlockNoteEditor, title: string) {
-  const exporter = new PDFExporter(editor.schema, pdfDefaultSchemaMappings);
+  const exporter = new PDFExporter(editor.schema, documentPdfSchemaMappings);
   const pdfDocument = await exporter.toReactPDFDocument(editor.document);
   const blob = await pdf(pdfDocument).toBlob();
   const link = document.createElement("a");

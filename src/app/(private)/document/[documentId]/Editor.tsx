@@ -21,14 +21,37 @@ import "@blocknote/core/fonts/inter.css";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/shadcn";
 import "@blocknote/shadcn/style.css";
-import { ArrowLeft, CheckCircle2, Download, FileCheck2, FileText } from "lucide-react";
 import {
-  PDFExporter,
-  pdfDefaultSchemaMappings,
-} from "@blocknote/xl-pdf-exporter";
+  AlignCenter,
+  AlignLeft,
+  ArrowLeft,
+  Bold,
+  CheckCircle2,
+  Download,
+  FileCheck2,
+  FileText,
+  Italic,
+  List,
+  ListIndentDecrease,
+  ListIndentIncrease,
+  ListOrdered,
+  Redo2,
+  Strikethrough,
+  Underline,
+  Undo2,
+} from "lucide-react";
+import { PDFExporter } from "@blocknote/xl-pdf-exporter";
 import { pdf } from "@react-pdf/renderer";
 import { Block, BlockNoteEditor } from "@blocknote/core";
 import { Input } from "@/components/ui/input";
+import { documentPdfSchemaMappings } from "@/lib/document-pdf";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { type ClipboardEvent, useEffect, useRef, useState } from "react";
@@ -69,6 +92,7 @@ export default function Editor({
   const editor = useCreateBlockNote({
     autofocus: true,
     initialContent: content ?? undefined,
+    tabBehavior: "prefer-indent",
   });
 
   useEffect(() => {
@@ -237,6 +261,7 @@ export default function Editor({
         onSubmitAssignment={submitFromEditor}
         receiptHref={receiptHref}
       />
+      {!isSubmitted && <DocumentToolbar editor={editor} />}
       <div className="h-full overflow-y-auto py-2">
         <div className="max-w-250 min-h-full p-8 shadow-sm mx-auto">
           <BlockNoteView
@@ -352,7 +377,7 @@ function DocumentHeader({
   const [isSavingTitle, setIsSavingTitle] = useState(false);
 
   async function exportPDF() {
-    const exporter = new PDFExporter(editor.schema, pdfDefaultSchemaMappings);
+    const exporter = new PDFExporter(editor.schema, documentPdfSchemaMappings);
 
     // Convert the blocks to a react-pdf document
     const pdfDocument = await exporter.toReactPDFDocument(editor.document);
@@ -484,6 +509,180 @@ function DocumentHeader({
       {submissionError && <p role="alert" className="container mx-auto px-5 pb-3 text-sm text-[#9b332a] sm:px-8">{submissionError}</p>}
     </header>
   );
+}
+
+type ToolbarBlockType = "paragraph" | "heading-1" | "heading-2" | "heading-3" | "bulletListItem" | "numberedListItem";
+
+function DocumentToolbar({ editor }: { editor: BlockNoteEditor }) {
+  const [state, setState] = useState(() => getToolbarState(editor));
+
+  useEffect(() => {
+    const updateToolbarState = () => setState(getToolbarState(editor));
+
+    updateToolbarState();
+    const unsubscribeSelection = editor.onSelectionChange(updateToolbarState);
+    const unsubscribeChange = editor.onChange(updateToolbarState);
+
+    return () => {
+      unsubscribeSelection();
+      unsubscribeChange();
+    };
+  }, [editor]);
+
+  const focusEditor = () => editor.focus();
+  const updateBlockType = (value: ToolbarBlockType | null) => {
+    if (!value) return;
+
+    focusEditor();
+    const block = editor.getTextCursorPosition().block;
+    if (value.startsWith("heading-")) {
+      editor.updateBlock(block, { type: "heading", props: { level: Number(value.at(-1)) } });
+      return;
+    }
+    if (value === "paragraph") {
+      editor.updateBlock(block, { type: "paragraph" });
+      return;
+    }
+    if (value === "bulletListItem") {
+      editor.updateBlock(block, { type: "bulletListItem" });
+      return;
+    }
+    editor.updateBlock(block, { type: "numberedListItem" });
+  };
+
+  return (
+    <div className="border-b border-[#dbe3dc] bg-white">
+      <div className="container mx-auto overflow-x-auto px-5 sm:px-8">
+        <div className="flex h-13 min-w-max items-center gap-1" role="toolbar" aria-label="Document formatting">
+          <ToolbarButton label="Undo" onClick={() => { focusEditor(); editor.undo(); }}>
+            <Undo2 />
+          </ToolbarButton>
+          <ToolbarButton label="Redo" onClick={() => { focusEditor(); editor.redo(); }}>
+            <Redo2 />
+          </ToolbarButton>
+          <ToolbarDivider />
+          <Select
+            items={toolbarBlockTypeItems}
+            value={state.blockType}
+            onValueChange={updateBlockType}
+          >
+            <SelectTrigger size="sm" className="w-35 border-transparent bg-transparent hover:bg-muted">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {toolbarBlockTypeItems.map((item) => (
+                <SelectItem key={item.value} value={item.value}>{item.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <ToolbarDivider />
+          <ToolbarButton label="Bold" pressed={state.bold} onClick={() => { focusEditor(); editor.toggleStyles({ bold: true }); }}>
+            <Bold />
+          </ToolbarButton>
+          <ToolbarButton label="Italic" pressed={state.italic} onClick={() => { focusEditor(); editor.toggleStyles({ italic: true }); }}>
+            <Italic />
+          </ToolbarButton>
+          <ToolbarButton label="Underline" pressed={state.underline} onClick={() => { focusEditor(); editor.toggleStyles({ underline: true }); }}>
+            <Underline />
+          </ToolbarButton>
+          <ToolbarButton label="Strikethrough" pressed={state.strike} onClick={() => { focusEditor(); editor.toggleStyles({ strike: true }); }}>
+            <Strikethrough />
+          </ToolbarButton>
+          <ToolbarDivider />
+          <ToolbarButton label="Bulleted list" pressed={state.blockType === "bulletListItem"} onClick={() => updateBlockType("bulletListItem")}>
+            <List />
+          </ToolbarButton>
+          <ToolbarButton label="Numbered list" pressed={state.blockType === "numberedListItem"} onClick={() => updateBlockType("numberedListItem")}>
+            <ListOrdered />
+          </ToolbarButton>
+          <ToolbarDivider />
+          <ToolbarButton label="Align left" pressed={state.textAlignment === "left"} onClick={() => updateTextAlignment(editor, "left")}>
+            <AlignLeft />
+          </ToolbarButton>
+          <ToolbarButton label="Center align" pressed={state.textAlignment === "center"} onClick={() => updateTextAlignment(editor, "center")}>
+            <AlignCenter />
+          </ToolbarButton>
+          <ToolbarDivider />
+          <ToolbarButton label="Decrease indentation (Shift+Tab)" disabled={!state.canOutdent} onClick={() => { focusEditor(); editor.unnestBlock(); }}>
+            <ListIndentDecrease />
+          </ToolbarButton>
+          <ToolbarButton label="Increase indentation (Tab)" disabled={!state.canIndent} onClick={() => { focusEditor(); editor.nestBlock(); }}>
+            <ListIndentIncrease />
+          </ToolbarButton>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ToolbarButton({
+  children,
+  label,
+  pressed = false,
+  disabled = false,
+  onClick,
+}: {
+  children: React.ReactNode;
+  label: string;
+  pressed?: boolean;
+  disabled?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <Button
+      aria-label={label}
+      aria-pressed={pressed}
+      title={label}
+      variant="ghost"
+      size="icon-sm"
+      className={pressed ? "bg-[#d8e8db] text-[#315943] hover:bg-[#cfe2d3]" : ""}
+      disabled={disabled}
+      onMouseDown={(event) => event.preventDefault()}
+      onClick={onClick}
+    >
+      {children}
+    </Button>
+  );
+}
+
+function ToolbarDivider() {
+  return <span aria-hidden="true" className="mx-1 h-5 w-px bg-[#dbe3dc]" />;
+}
+
+const toolbarBlockTypeItems: Array<{ label: string; value: ToolbarBlockType }> = [
+  { label: "Normal text", value: "paragraph" },
+  { label: "Title", value: "heading-1" },
+  { label: "Heading 1", value: "heading-2" },
+  { label: "Heading 2", value: "heading-3" },
+  { label: "Bulleted list", value: "bulletListItem" },
+  { label: "Numbered list", value: "numberedListItem" },
+];
+
+function getToolbarState(editor: BlockNoteEditor) {
+  const block = editor.getTextCursorPosition().block;
+  const styles = editor.getActiveStyles();
+  const blockProps = block.props as { level?: number; textAlignment?: "left" | "center" | "right" | "justify" };
+  const blockType: ToolbarBlockType = block.type === "heading"
+    ? `heading-${Math.min(blockProps.level ?? 1, 3)}` as ToolbarBlockType
+    : block.type === "bulletListItem" || block.type === "numberedListItem"
+      ? block.type
+      : "paragraph";
+
+  return {
+    blockType,
+    bold: styles.bold === true,
+    italic: styles.italic === true,
+    underline: styles.underline === true,
+    strike: styles.strike === true,
+    textAlignment: blockProps.textAlignment ?? "left",
+    canIndent: editor.canNestBlock(),
+    canOutdent: editor.canUnnestBlock(),
+  };
+}
+
+function updateTextAlignment(editor: BlockNoteEditor, textAlignment: "left" | "center") {
+  editor.focus();
+  editor.updateBlock(editor.getTextCursorPosition().block, { props: { textAlignment } });
 }
 
 function SaveStatus({ status, onRetry }: { status: "idle" | "pending" | "saving" | "saved" | "error"; onRetry: () => void }) {
