@@ -680,9 +680,9 @@ function ToolbarDivider() {
 
 const toolbarBlockTypeItems: Array<{ label: string; value: ToolbarBlockType }> = [
   { label: "Normal text", value: "paragraph" },
-  { label: "Title", value: "heading-1" },
-  { label: "Heading 1", value: "heading-2" },
-  { label: "Heading 2", value: "heading-3" },
+  { label: "Heading 1", value: "heading-1" },
+  { label: "Heading 2", value: "heading-2" },
+  { label: "Heading 3", value: "heading-3" },
   { label: "Bulleted list", value: "bulletListItem" },
   { label: "Numbered list", value: "numberedListItem" },
 ];
