@@ -1,0 +1,1 @@
+ALTER TABLE "document_milestones" ADD COLUMN "bulk_paste_word_count" integer DEFAULT 0 NOT NULL;

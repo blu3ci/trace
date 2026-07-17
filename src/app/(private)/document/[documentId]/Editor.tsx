@@ -1,7 +1,22 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
-import { saveDocument, updateDocumentTitle } from "@/server/actions/documents";
+import {
+  saveDocument,
+  submitAssignmentSubmission,
+  updateDocumentTitle,
+} from "@/server/actions/documents";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import "@blocknote/core/fonts/inter.css";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/shadcn";
@@ -15,55 +30,71 @@ import { pdf } from "@react-pdf/renderer";
 import { Block, BlockNoteEditor } from "@blocknote/core";
 import { Input } from "@/components/ui/input";
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { type ClipboardEvent, useEffect, useRef, useState } from "react";
 
 const SAVE_DELAY = 1500;
+const BULK_PASTE_WORD_THRESHOLD = 50;
+const MEANINGFUL_CHANGE_WORD_THRESHOLD = 12;
 
 export default function Editor({
   title,
   documentId,
   content,
   isSubmitted,
-  isAssignmentDocument,
+  assignmentId,
   receiptHref,
 }: {
   title: string;
   documentId: string;
   content: Block[] | null;
   isSubmitted: boolean;
-  isAssignmentDocument: boolean;
-  receiptHref?: string;
+  assignmentId?: string;
+  receiptHref: string;
 }) {
   const [saveStatus, setSaveStatus] = useState<"idle" | "pending" | "saving" | "saved" | "error">("idle");
   const [saveRequest, setSaveRequest] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submissionError, setSubmissionError] = useState<string | null>(null);
   const activeMillis = useRef(0);
   const hasCapturedMilestone = useRef(false);
   const lastInteractionAt = useRef<number | null>(null);
   const lastMilestoneAt = useRef<number | null>(null);
+  const lastMilestoneText = useRef(normalizeDocumentText(extractText(content ?? [])));
+  const pendingBulkPasteWordCount = useRef(0);
   const latestSaveRequest = useRef(0);
   const saveQueue = useRef(Promise.resolve());
+  const pendingSaveTimer = useRef<number | null>(null);
+  const router = useRouter();
   const editor = useCreateBlockNote({
     autofocus: true,
     initialContent: content ?? undefined,
   });
 
   useEffect(() => {
-    if (!saveRequest || isSubmitted) return;
+    if (!saveRequest || isSubmitted || isSubmitting) return;
 
     const timeout = window.setTimeout(() => {
+      pendingSaveTimer.current = null;
       const document: Block[] = editor.document;
       const now = Date.now();
       const wordCount = countDocumentWords(document);
+      const documentText = normalizeDocumentText(extractText(document));
       const activeMillisAtSave = activeMillis.current;
+      const bulkPasteWordCountAtSave = pendingBulkPasteWordCount.current;
       const shouldCaptureMilestone = wordCount > 0 && (
         !hasCapturedMilestone.current
-        || !lastMilestoneAt.current
-        || now - lastMilestoneAt.current >= 60_000
+        || bulkPasteWordCountAtSave > 0
+        || (
+          (!lastMilestoneAt.current || now - lastMilestoneAt.current >= 60_000)
+          && isMeaningfulDraftChange(lastMilestoneText.current, documentText)
+        )
       );
       const milestone = shouldCaptureMilestone
         ? {
           activeSeconds: Math.round(activeMillisAtSave / 1000),
           blockCount: document.length,
+          bulkPasteWordCount: bulkPasteWordCountAtSave,
           wordCount,
         }
         : undefined;
@@ -78,7 +109,12 @@ export default function Editor({
           if (milestone) {
             hasCapturedMilestone.current = true;
             lastMilestoneAt.current = now;
+            lastMilestoneText.current = documentText;
             activeMillis.current = Math.max(0, activeMillis.current - activeMillisAtSave);
+            pendingBulkPasteWordCount.current = Math.max(
+              0,
+              pendingBulkPasteWordCount.current - bulkPasteWordCountAtSave,
+            );
           }
           if (latestSaveRequest.current === saveRequest) setSaveStatus("saved");
         } catch {
@@ -86,9 +122,13 @@ export default function Editor({
         }
       });
     }, SAVE_DELAY);
+    pendingSaveTimer.current = timeout;
 
-    return () => window.clearTimeout(timeout);
-  }, [documentId, editor, isSubmitted, saveRequest]);
+    return () => {
+      window.clearTimeout(timeout);
+      if (pendingSaveTimer.current === timeout) pendingSaveTimer.current = null;
+    };
+  }, [documentId, editor, isSubmitted, isSubmitting, saveRequest]);
 
   useEffect(() => {
     const warnBeforeLeaving = (event: BeforeUnloadEvent) => {
@@ -117,6 +157,67 @@ export default function Editor({
     requestSave();
   };
 
+  const submitFromEditor = async () => {
+    if (!assignmentId || isSubmitting) return;
+
+    setIsSubmitting(true);
+    setSubmissionError(null);
+    if (pendingSaveTimer.current) {
+      window.clearTimeout(pendingSaveTimer.current);
+      pendingSaveTimer.current = null;
+    }
+
+    try {
+      await saveQueue.current;
+      const document: Block[] = editor.document;
+      const now = Date.now();
+      const wordCount = countDocumentWords(document);
+      const documentText = normalizeDocumentText(extractText(document));
+      const activeMillisAtSave = activeMillis.current;
+      const bulkPasteWordCountAtSave = pendingBulkPasteWordCount.current;
+      const milestone = wordCount > 0
+        ? {
+          activeSeconds: Math.round(activeMillisAtSave / 1000),
+          blockCount: document.length,
+          bulkPasteWordCount: bulkPasteWordCountAtSave,
+          wordCount,
+        }
+        : undefined;
+      setSaveStatus("saving");
+      const saveResult = await saveDocument(documentId, document, milestone);
+      if (saveResult?.error) throw new Error("Unable to save the final draft");
+
+      if (milestone) {
+        hasCapturedMilestone.current = true;
+        lastMilestoneAt.current = now;
+        lastMilestoneText.current = documentText;
+        activeMillis.current = Math.max(0, activeMillis.current - activeMillisAtSave);
+        pendingBulkPasteWordCount.current = Math.max(
+          0,
+          pendingBulkPasteWordCount.current - bulkPasteWordCountAtSave,
+        );
+      }
+
+      const submissionResult = await submitAssignmentSubmission(assignmentId);
+      if (submissionResult.error || !submissionResult.receiptHref) {
+        throw new Error("Unable to submit the assignment");
+      }
+
+      router.push(submissionResult.receiptHref);
+    } catch (error) {
+      setSaveStatus("error");
+      setSubmissionError(error instanceof Error ? error.message : "Unable to submit the assignment");
+      setIsSubmitting(false);
+    }
+  };
+
+  const recordBulkPaste = (event: ClipboardEvent<HTMLDivElement>) => {
+    const pastedWordCount = countTextWords(event.clipboardData.getData("text/plain"));
+    if (pastedWordCount >= BULK_PASTE_WORD_THRESHOLD) {
+      pendingBulkPasteWordCount.current += pastedWordCount;
+    }
+  };
+
   // Renders the editor instance using a React component.
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -130,7 +231,10 @@ export default function Editor({
           requestSave();
         }}
         isSubmitted={isSubmitted}
-        isAssignmentDocument={isAssignmentDocument}
+        assignmentId={assignmentId}
+        isSubmitting={isSubmitting}
+        submissionError={submissionError}
+        onSubmitAssignment={submitFromEditor}
         receiptHref={receiptHref}
       />
       <div className="h-full overflow-y-auto py-2">
@@ -143,6 +247,7 @@ export default function Editor({
             onChange={() => {
               if (!isSubmitted) recordEditingActivity();
             }}
+            onPaste={recordBulkPaste}
             sideMenu={false}
             comments={false}
           />
@@ -153,7 +258,11 @@ export default function Editor({
 }
 
 function countDocumentWords(blocks: Block[]) {
-  return extractText(blocks)
+  return countTextWords(extractText(blocks));
+}
+
+function countTextWords(value: string) {
+  return value
     .replace(/[^\p{L}\p{N}]+/gu, " ")
     .trim()
     .split(/\s+/)
@@ -168,6 +277,52 @@ function extractText(value: unknown): string {
   return extractText(record.content);
 }
 
+function normalizeDocumentText(value: string) {
+  return value.replace(/\s+/g, " ").trim();
+}
+
+function isMeaningfulDraftChange(previous: string, current: string) {
+  if (previous === current) return false;
+
+  const previousWords = textWords(previous);
+  const currentWords = textWords(current);
+  let start = 0;
+  while (start < previousWords.length && start < currentWords.length && previousWords[start] === currentWords[start]) {
+    start += 1;
+  }
+
+  let previousEnd = previousWords.length;
+  let currentEnd = currentWords.length;
+  while (previousEnd > start && currentEnd > start && previousWords[previousEnd - 1] === currentWords[currentEnd - 1]) {
+    previousEnd -= 1;
+    currentEnd -= 1;
+  }
+
+  const changedWordCount = previousEnd - start + currentEnd - start;
+  if (changedWordCount >= MEANINGFUL_CHANGE_WORD_THRESHOLD) return true;
+
+  const previousSentences = textSentences(previous);
+  const currentSentences = textSentences(current);
+  const changedSentences = [
+    ...previousSentences.filter((sentence) => !currentSentences.includes(sentence)),
+    ...currentSentences.filter((sentence) => !previousSentences.includes(sentence)),
+  ];
+  return changedSentences.some((sentence) => textWords(sentence).length >= MEANINGFUL_CHANGE_WORD_THRESHOLD);
+}
+
+function textWords(value: string) {
+  return value.toLocaleLowerCase().match(/[\p{L}\p{N}]+/gu) ?? [];
+}
+
+function textSentences(value: string) {
+  return value
+    .toLocaleLowerCase()
+    .replace(/[^\p{L}\p{N}.!?]+/gu, " ")
+    .split(/[.!?]+/)
+    .map((sentence) => sentence.trim())
+    .filter(Boolean);
+}
+
 function DocumentHeader({
   editor,
   title,
@@ -175,7 +330,10 @@ function DocumentHeader({
   saveStatus,
   onRetrySave,
   isSubmitted,
-  isAssignmentDocument,
+  assignmentId,
+  isSubmitting,
+  submissionError,
+  onSubmitAssignment,
   receiptHref,
 }: {
   editor: BlockNoteEditor;
@@ -184,8 +342,11 @@ function DocumentHeader({
   saveStatus: "idle" | "pending" | "saving" | "saved" | "error";
   onRetrySave: () => void;
   isSubmitted: boolean;
-  isAssignmentDocument: boolean;
-  receiptHref?: string;
+  assignmentId?: string;
+  isSubmitting: boolean;
+  submissionError: string | null;
+  onSubmitAssignment: () => Promise<void>;
+  receiptHref: string;
 }) {
   const [draftTitle, setDraftTitle] = useState(title);
   const [isSavingTitle, setIsSavingTitle] = useState(false);
@@ -281,11 +442,33 @@ function DocumentHeader({
           ) : (
             <SaveStatus status={isSavingTitle ? "saving" : saveStatus} onRetry={onRetrySave} />
           )}
+          {assignmentId && !isSubmitted && (
+            <AlertDialog>
+              <AlertDialogTrigger render={<Button disabled={isSubmitting} />}>
+                <FileCheck2 />
+                <span className="hidden sm:inline">{isSubmitting ? "Submitting" : "Submit assignment"}</span>
+                <span className="sr-only sm:hidden">Submit assignment</span>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Submit this assignment?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Trace will save your final draft, create a verified receipt, and lock this document from further edits.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
+                  <AlertDialogAction onClick={() => { void onSubmitAssignment(); }} disabled={isSubmitting}>
+                    {isSubmitting ? "Submitting…" : "Submit and create receipt"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
           <Button
             variant="outline"
             nativeButton={false}
-            disabled={isAssignmentDocument && !isSubmitted}
-            render={receiptHref ? <Link href={receiptHref} /> : undefined}
+            render={<Link href={receiptHref} />}
           >
             <FileCheck2 />
             <span className="hidden sm:inline">View receipt</span>
@@ -298,6 +481,7 @@ function DocumentHeader({
           </Button>
         </div>
       </div>
+      {submissionError && <p role="alert" className="container mx-auto px-5 pb-3 text-sm text-[#9b332a] sm:px-8">{submissionError}</p>}
     </header>
   );
 }

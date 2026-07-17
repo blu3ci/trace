@@ -24,11 +24,11 @@ export default async function DocumentPage({
 
   const submission = await db.query.assignmentSubmissionsTable.findFirst({
     where: { documentId, clerkUserId: userId },
-    columns: { id: true, submittedAt: true },
+    columns: { assignmentId: true, id: true, submittedAt: true },
     with: { receipt: { columns: { id: true } } },
   });
-  const receiptHref = submission
-    ? submission.receipt ? `/receipts/${submission.id}` : undefined
+  const receiptHref = submission?.receipt
+    ? `/receipts/${submission.id}`
     : `/receipts/document/${document.id}`;
 
   return (
@@ -37,7 +37,7 @@ export default async function DocumentPage({
       documentId={document.id}
       content={document.content}
       isSubmitted={submission?.submittedAt != null}
-      isAssignmentDocument={submission != null}
+      assignmentId={submission?.assignmentId}
       receiptHref={receiptHref}
     />
   );

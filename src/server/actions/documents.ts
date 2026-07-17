@@ -18,7 +18,7 @@ import { redirect } from "next/navigation";
 import * as yup from "yup";
 import "server-only";
 import { Block } from "@blocknote/core";
-import { assignmentSubmissionSchema } from "@/formSchemas/assignment";
+import { assignmentSubmissionSchema, attachDocumentToAssignmentSchema } from "@/formSchemas/assignment";
 import { randomUUID } from "node:crypto";
 
 function isEditableDocument(documentId: string) {
@@ -98,11 +98,69 @@ export async function createAssignmentSubmission(
   redirect(`/document/${documentId}`);
 }
 
+export async function attachDocumentToAssignment(
+  unsafeDocumentId: string,
+  unsafeAssignmentId: string,
+): Promise<{ error: boolean }> {
+  const { userId } = await auth();
+  if (!userId) return { error: true };
+
+  let documentId: string;
+  let assignmentId: string;
+  try {
+    ({ documentId, assignmentId } = await attachDocumentToAssignmentSchema.validate({
+      documentId: unsafeDocumentId,
+      assignmentId: unsafeAssignmentId,
+    }));
+  } catch {
+    return { error: true };
+  }
+
+  const [document, membership, existingDocumentSubmission, existingAssignmentSubmission] = await Promise.all([
+    db.query.documentsTable.findFirst({
+      where: { id: documentId, clerkUserId: userId },
+      columns: { id: true },
+    }),
+    db.query.assignmentMembersTable.findFirst({
+      where: { assignmentId, clerkUserId: userId },
+      columns: { assignmentId: true },
+    }),
+    db.query.assignmentSubmissionsTable.findFirst({
+      where: { documentId },
+      columns: { id: true },
+    }),
+    db.query.assignmentSubmissionsTable.findFirst({
+      where: { assignmentId, clerkUserId: userId },
+      columns: { id: true },
+    }),
+  ]);
+
+  if (!document || !membership || existingDocumentSubmission || existingAssignmentSubmission) {
+    return { error: true };
+  }
+
+  try {
+    await db.insert(assignmentSubmissionsTable).values({
+      assignmentId,
+      documentId,
+      clerkUserId: userId,
+    });
+  } catch {
+    return { error: true };
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/dashboard/assignments");
+  revalidatePath(`/document/${documentId}`);
+  revalidatePath(`/document/${documentId}/settings`);
+  return { error: false };
+}
+
 export async function submitAssignmentSubmission(
   unsafeAssignmentId: string,
-): Promise<void> {
+): Promise<{ error: boolean; receiptHref?: string }> {
   const { userId } = await auth();
-  if (!userId) return;
+  if (!userId) return { error: true };
 
   let assignmentId: string;
   try {
@@ -110,7 +168,7 @@ export async function submitAssignmentSubmission(
       assignmentId: unsafeAssignmentId,
     }));
   } catch {
-    return;
+    return { error: true };
   }
 
   const membership = await db.query.assignmentMembersTable.findFirst({
@@ -118,19 +176,19 @@ export async function submitAssignmentSubmission(
     columns: { assignmentId: true },
   });
 
-  if (!membership) return;
+  if (!membership) return { error: true };
 
   const submission = await db.query.assignmentSubmissionsTable.findFirst({
     where: { assignmentId, clerkUserId: userId },
     columns: { id: true, documentId: true, submittedAt: true },
   });
-  if (!submission || submission.submittedAt) return;
+  if (!submission || submission.submittedAt) return { error: true };
 
   const document = await db.query.documentsTable.findFirst({
     where: { id: submission.documentId, clerkUserId: userId },
     columns: { content: true },
   });
-  if (!document?.content) return;
+  if (!document?.content) return { error: true };
 
   const milestones = await db.query.documentMilestonesTable.findMany({
     where: { documentId: submission.documentId },
@@ -149,7 +207,7 @@ export async function submitAssignmentSubmission(
     )
     .returning({ id: assignmentSubmissionsTable.id });
 
-  if (!updatedSubmission) return;
+  if (!updatedSubmission) return { error: true };
 
   await db.insert(assignmentReceiptsTable).values({
     submissionId: submission.id,
@@ -163,6 +221,14 @@ export async function submitAssignmentSubmission(
 
   revalidatePath("/dashboard/assignments");
   revalidatePath("/dashboard/assignments/instructor");
+  revalidatePath(`/document/${submission.documentId}`);
+  return { error: false, receiptHref: `/receipts/${submission.id}` };
+}
+
+export async function submitAssignmentSubmissionFromForm(
+  unsafeAssignmentId: string,
+): Promise<void> {
+  await submitAssignmentSubmission(unsafeAssignmentId);
 }
 
 export async function createDocument(
@@ -249,7 +315,7 @@ export async function deleteDocument(documentId: string): Promise<{ error: boole
 export async function saveDocument(
   documentId: string,
   jsonBlocks: Block[],
-  milestone?: { activeSeconds: number; blockCount: number; wordCount: number },
+  milestone?: { activeSeconds: number; blockCount: number; bulkPasteWordCount: number; wordCount: number },
 ) {
   const { userId } = await auth();
 
@@ -273,17 +339,19 @@ export async function saveDocument(
       documentId,
       activeSeconds: milestone.activeSeconds,
       blockCount: milestone.blockCount,
+      bulkPasteWordCount: milestone.bulkPasteWordCount,
       content: jsonBlocks,
       wordCount: milestone.wordCount,
     });
   }
 }
 
-function isValidMilestone(milestone: { activeSeconds: number; blockCount: number; wordCount: number }) {
-  return [milestone.activeSeconds, milestone.blockCount, milestone.wordCount]
+function isValidMilestone(milestone: { activeSeconds: number; blockCount: number; bulkPasteWordCount: number; wordCount: number }) {
+  return [milestone.activeSeconds, milestone.blockCount, milestone.bulkPasteWordCount, milestone.wordCount]
     .every((value) => Number.isInteger(value) && value >= 0)
     && milestone.activeSeconds <= 90 * 60
     && milestone.blockCount <= 100_000
+    && milestone.bulkPasteWordCount <= 1_000_000
     && milestone.wordCount <= 1_000_000;
 }
 

@@ -6,6 +6,7 @@ import { Block } from "@blocknote/core";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/db";
+import { ReceiptPdfDownloadButton } from "@/components/receipt/receipt-pdf-download-button";
 import { RevisionComparisonLink } from "@/components/receipt/revision-comparison-link";
 import { ReceiptPreview } from "./DynamicReceiptPreview";
 import { InstructorReceiptSelector } from "./instructor-receipt-selector";
@@ -30,9 +31,17 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
   const milestones = await db.query.documentMilestonesTable.findMany({
     where: { documentId: submission.documentId },
     orderBy: ({ createdAt }, { asc }) => asc(createdAt),
-    columns: { activeSeconds: true, blockCount: true, content: true, createdAt: true, wordCount: true },
+    columns: { activeSeconds: true, blockCount: true, bulkPasteWordCount: true, content: true, createdAt: true, wordCount: true },
   });
   const receipt = submission.receipt;
+  const milestoneSummaries = milestones.map((milestone, index) => ({
+    ...milestone,
+    summary: summarizeMilestone(milestone, milestones[index - 1]),
+  }));
+  const bulkPasteWordCount = milestones.reduce(
+    (total, milestone) => total + milestone.bulkPasteWordCount,
+    0,
+  );
   const backHref = isInstructor ? `/dashboard/assignments/instructor/${submission.assignmentId}` : "/dashboard/assignments";
   const assignmentReceipts = isInstructor
     ? await db.query.assignmentSubmissionsTable.findMany({
@@ -59,8 +68,25 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
 
       <div className="container mx-auto max-w-6xl px-5 py-8 sm:px-8 sm:py-10">
         <p className="text-sm font-semibold tracking-[0.12em] text-[#567160] uppercase">Proof of work</p>
-        <h1 className="mt-2 text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">{submission.assignment.title}</h1>
-        <p className="mt-2 text-[#65716a]">Submitted {formatDateTime(receipt.submittedAt)} · Final document preserved at submission.</p>
+        <div className="mt-2 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">{submission.assignment.title}</h1>
+            <p className="mt-2 text-[#65716a]">Submitted {formatDateTime(receipt.submittedAt)} · Final document preserved at submission.</p>
+          </div>
+          <ReceiptPdfDownloadButton
+            activeWritingTime={formatDuration(receipt.activeSeconds)}
+            assignmentTitle={submission.assignment.title}
+            bulkPasteWordCount={bulkPasteWordCount}
+            finalWordCount={receipt.finalWordCount}
+            milestones={milestoneSummaries.map(({ createdAt, activeSeconds, summary }) => ({
+              dateTime: formatDateTime(createdAt),
+              duration: formatDuration(activeSeconds),
+              text: summary.text,
+              title: summary.title,
+            }))}
+            submittedAt={formatDateTime(receipt.submittedAt)}
+          />
+        </div>
         {isInstructor && (
           <InstructorReceiptSelector
             submissionId={submission.id}
@@ -71,10 +97,11 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
           />
         )}
 
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
+        <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <ReceiptStat icon={Clock3} label="Active writing time" value={formatDuration(receipt.activeSeconds)} />
           <ReceiptStat icon={History} label="Revision milestones" value={String(receipt.revisionCount)} />
           <ReceiptStat icon={PencilLine} label="Final word count" value={receipt.finalWordCount.toLocaleString()} />
+          <ReceiptStat icon={FileCheck2} label="Large pasted additions" value={bulkPasteWordCount ? `${bulkPasteWordCount.toLocaleString()} words` : "None"} />
         </div>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[0.72fr_1.28fr]">
@@ -83,7 +110,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
             <CardContent>
               <p className="text-sm leading-6 text-[#607067]">Each milestone describes the visible change in the draft since the previous saved moment.</p>
               <ol className="mt-5 space-y-4 border-l border-[#ced9d0] pl-4">
-                {milestones.length === 0 ? <li className="text-sm text-[#69756d]">This submission was completed before receipt tracking began.</li> : milestones.map((milestone, index) => { const summary = summarizeMilestone(milestone, milestones[index - 1]); return <li key={`${milestone.createdAt.toISOString()}-${index}`} className="relative text-sm"><span className="absolute -left-[1.28rem] top-1.5 size-2 rounded-full bg-[#78a782]" /><p className="font-medium leading-5">{summary.title}</p><p className="mt-1 leading-5 text-[#607067]">{summary.text}</p><p className="mt-1 text-[#69756d]">{formatDateTime(milestone.createdAt)} · {formatDuration(milestone.activeSeconds)} active writing</p>{index > 0 && <div className="mt-3"><RevisionComparisonLink documentId={submission.documentId} previous={milestones[index - 1]} current={milestone} /></div>}</li>; })}
+                {milestoneSummaries.length === 0 ? <li className="text-sm text-[#69756d]">This submission was completed before receipt tracking began.</li> : milestoneSummaries.map((milestone, index) => <li key={`${milestone.createdAt.toISOString()}-${index}`} className="relative text-sm"><span className="absolute -left-[1.28rem] top-1.5 size-2 rounded-full bg-[#78a782]" /><p className="font-medium leading-5">{milestone.summary.title}</p><p className="mt-1 leading-5 text-[#607067]">{milestone.summary.text}</p><p className="mt-1 text-[#69756d]">{formatDateTime(milestone.createdAt)} · {formatDuration(milestone.activeSeconds)} active writing</p>{index > 0 && <div className="mt-3"><RevisionComparisonLink documentId={submission.documentId} previous={milestoneSummaries[index - 1]} current={milestone} /></div>}</li>)}
               </ol>
             </CardContent>
           </Card>
@@ -104,13 +131,19 @@ function formatDuration(seconds: number) {
 }
 
 function summarizeMilestone(
-  milestone: { blockCount: number; content: Block[] | null; wordCount: number },
-  previous: { blockCount: number; content: Block[] | null; wordCount: number } | undefined,
+  milestone: { blockCount: number; bulkPasteWordCount: number; content: Block[] | null; wordCount: number },
+  previous: { blockCount: number; bulkPasteWordCount: number; content: Block[] | null; wordCount: number } | undefined,
 ) {
   const currentBlocks = blockTexts(milestone.content);
   const previousBlocks = blockTexts(previous?.content);
   const words = milestone.wordCount.toLocaleString();
   if (!previous) {
+    if (milestone.bulkPasteWordCount > 0) {
+      return {
+        title: "Start with substantial material",
+        text: `The first saved draft includes a ${milestone.bulkPasteWordCount.toLocaleString()}-word paste and takes shape at ${words} words.`,
+      };
+    }
     return {
       title: "Set the first direction",
       text: currentBlocks[0]
@@ -121,6 +154,13 @@ function summarizeMilestone(
 
   if (!milestone.content || !previous.content) {
     return legacySummary(milestone, previous);
+  }
+
+  if (milestone.bulkPasteWordCount > 0) {
+    return {
+      title: "Add substantial material",
+      text: `A ${milestone.bulkPasteWordCount.toLocaleString()}-word paste added material to the draft; the saved revision preserves how it was incorporated.`,
+    };
   }
 
   const additions = currentBlocks.filter((block) => !previousBlocks.some((previousBlock) => sameBlock(block, previousBlock)));
@@ -140,16 +180,23 @@ function summarizeMilestone(
     return { title: "Develop the draft", text: `New material adds “${excerpt(additions[0])}”, bringing the draft to ${words} words.` };
   }
   if (removals.length > 0) {
-    return { title: "Refine the draft", text: `The draft removes “${excerpt(removals[0])}” and settles at ${words} words.` };
+    return { title: "Remove material", text: `The draft removes “${excerpt(removals[0])}” and settles at ${words} words.` };
   }
   return { title: "Revise the language", text: `The draft is revised while holding at ${words} words; this saved moment preserves the updated phrasing.` };
 }
 
 function legacySummary(
-  milestone: { blockCount: number; wordCount: number },
-  previous: { blockCount: number; wordCount: number },
+  milestone: { blockCount: number; bulkPasteWordCount: number; wordCount: number },
+  previous: { blockCount: number; bulkPasteWordCount: number; wordCount: number },
 ) {
   const words = milestone.wordCount.toLocaleString();
+
+  if (milestone.bulkPasteWordCount > 0) {
+    return {
+      title: "Add substantial material",
+      text: `A ${milestone.bulkPasteWordCount.toLocaleString()}-word paste added material to the draft, reaching ${words} words.`,
+    };
+  }
 
   const wordChange = milestone.wordCount - previous.wordCount;
   const blockChange = milestone.blockCount - previous.blockCount;
@@ -157,13 +204,13 @@ function legacySummary(
     return { title: "Develop the draft", text: `The draft grew by ${wordChange.toLocaleString()} words, reaching ${words} words.` };
   }
   if (wordChange < 0) {
-    return { title: "Refine the draft", text: `The draft was refined by ${Math.abs(wordChange).toLocaleString()} words, settling at ${words} words.` };
+    return { title: "Remove material", text: `The draft was refined by ${Math.abs(wordChange).toLocaleString()} words, settling at ${words} words.` };
   }
   if (blockChange > 0) {
     return { title: "Develop the draft", text: `The draft was expanded into ${blockChange} additional writing block${blockChange === 1 ? "" : "s"} while holding at ${words} words.` };
   }
   if (blockChange < 0) {
-    return { title: "Refine the draft", text: `The draft was consolidated into fewer writing blocks while holding at ${words} words.` };
+    return { title: "Remove material", text: `The draft was consolidated into fewer writing blocks while holding at ${words} words.` };
   }
   return { title: "Revise the language", text: `A revision was saved while the draft held steady at ${words} words.` };
 }

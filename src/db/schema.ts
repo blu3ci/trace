@@ -103,6 +103,7 @@ export const documentMilestonesTable = pgTable(
     wordCount: integer("word_count").notNull(),
     blockCount: integer("block_count").notNull(),
     activeSeconds: integer("active_seconds").notNull().default(0),
+    bulkPasteWordCount: integer("bulk_paste_word_count").notNull().default(0),
     createdAt,
   },
   (t) => [index("document_milestones_document_id_created_at_idx").on(t.documentId, t.createdAt)],

@@ -14,7 +14,7 @@ export default async function DocumentSettingsPage({
 
   if (!userId) return redirectToSignIn();
 
-  const [document, submission] = await Promise.all([
+  const [document, submission, memberships, submissions] = await Promise.all([
     db.query.documentsTable.findFirst({
       where: { id: documentId, clerkUserId: userId },
       columns: { id: true, title: true },
@@ -22,16 +22,42 @@ export default async function DocumentSettingsPage({
     db.query.assignmentSubmissionsTable.findFirst({
       where: { documentId, clerkUserId: userId },
       columns: { submittedAt: true },
+      with: { assignment: { columns: { title: true } } },
+    }),
+    db.query.assignmentMembersTable.findMany({
+      where: { clerkUserId: userId },
+      columns: { assignmentId: true },
+    }),
+    db.query.assignmentSubmissionsTable.findMany({
+      where: { clerkUserId: userId },
+      columns: { assignmentId: true },
     }),
   ]);
 
   if (!document) notFound();
+  const joinedAssignmentIds = memberships.map((membership) => membership.assignmentId);
+  const submittedAssignmentIds = new Set(submissions.map((assignmentSubmission) => assignmentSubmission.assignmentId));
+  const assignments = joinedAssignmentIds.length === 0 || submission
+    ? []
+    : await db.query.assignmentsTable.findMany({
+      where: { id: { in: joinedAssignmentIds } },
+      columns: { course: true, id: true, title: true },
+    });
+  const availableAssignments = assignments
+    .filter((assignment) => !submittedAssignmentIds.has(assignment.id))
+    .map((assignment) => ({
+      id: assignment.id,
+      label: assignment.course ? `${assignment.title} · ${assignment.course}` : assignment.title,
+    }));
 
   return (
     <DocumentSettingsForm
       documentId={document.id}
       title={document.title}
       isSubmitted={submission?.submittedAt != null}
+      isAttachedToAssignment={submission != null}
+      attachedAssignmentTitle={submission?.assignment?.title}
+      availableAssignments={availableAssignments}
     />
   );
 }

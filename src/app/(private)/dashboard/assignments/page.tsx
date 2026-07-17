@@ -14,7 +14,7 @@ import { db } from "@/db";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   createAssignmentSubmission,
-  submitAssignmentSubmission,
+  submitAssignmentSubmissionFromForm,
 } from "@/server/actions/documents";
 import { JoinAssignmentForm } from "./join-assignment-form";
 
@@ -128,7 +128,7 @@ export default async function AssignmentsPage() {
                               {submission.receipt && <Button variant="outline" nativeButton={false} render={<Link href={`/receipts/${submission.id}`} />}>View receipt</Button>}
                             </>
                           ) : (
-                            <form action={submitAssignmentSubmission.bind(null, assignment.id)}>
+                            <form action={submitAssignmentSubmissionFromForm.bind(null, assignment.id)}>
                               <Button type="submit">
                                 <CheckCircle2 className="size-4" /> Mark as submitted
                               </Button>

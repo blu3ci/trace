@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { db } from "@/db";
 import { auth } from "@clerk/nextjs/server";
 import { Block } from "@blocknote/core";
-import { CalendarDays, CheckCircle2, ClipboardList, Ellipsis, FilePlusCorner, FileText } from "lucide-react";
+import { CalendarDays, CheckCircle2, ClipboardList, FilePlusCorner, FileText, Settings2 } from "lucide-react";
 import Link from "next/link";
 
 export const revalidate = 0;
@@ -114,13 +114,13 @@ function Document({
     <div className="relative h-full">
       <Button
         variant="ghost"
-        size="icon-sm"
+        size="sm"
         className="absolute top-3 right-3 z-10 text-[#607067]"
-        aria-label={`Manage ${title}`}
+        aria-label={`Manage or submit ${title}`}
         nativeButton={false}
         render={<Link href={`/document/${id}/settings`} />}
       >
-        <Ellipsis />
+        <Settings2 /> <span className="hidden sm:inline">Manage</span>
       </Button>
       <Link href={`/document/${id}`} className="group block h-full">
         <Card className="h-full min-h-52 border-[#e0e5e0] transition-shadow group-hover:shadow-sm">

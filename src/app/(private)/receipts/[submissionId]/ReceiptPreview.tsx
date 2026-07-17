@@ -12,18 +12,23 @@ import { Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function ReceiptPreview({ content, title, label = "Final submitted document" }: { content: Block[]; title: string; label?: string }) {
-  const editor = useCreateBlockNote({ initialContent: content });
+  const hasSavedContent = content.length > 0;
+  const editor = useCreateBlockNote({ initialContent: hasSavedContent ? content : undefined });
 
   return (
     <section className="overflow-hidden rounded-xl border border-[#dbe3dc] bg-white shadow-sm">
       <div className="flex items-center justify-between border-b border-[#e5e9e5] bg-[#f8faf8] px-5 py-3">
         <p className="text-sm font-medium text-[#405049]">{label}</p>
-        <Button variant="outline" size="sm" onClick={() => exportPdf(editor, title)}>
+        <Button variant="outline" size="sm" disabled={!hasSavedContent} onClick={() => exportPdf(editor, title)}>
           <Download /> Export PDF
         </Button>
       </div>
       <div className="p-6 sm:p-10">
-        <BlockNoteView editor={editor} theme="light" editable={false} sideMenu={false} formattingToolbar={false} comments={false} />
+        {hasSavedContent ? (
+          <BlockNoteView editor={editor} theme="light" editable={false} sideMenu={false} formattingToolbar={false} comments={false} />
+        ) : (
+          <p className="text-sm text-[#69756d]">This document has no saved writing yet.</p>
+        )}
       </div>
     </section>
   );

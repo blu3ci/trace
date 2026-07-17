@@ -4,7 +4,8 @@ import { yupResolver } from "@hookform/resolvers/yup";
 import { Controller, useForm } from "react-hook-form";
 import * as yup from "yup";
 import Link from "next/link";
-import { ArrowLeft, Trash2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, ClipboardList, Trash2 } from "lucide-react";
 
 import {
   AlertDialog,
@@ -34,24 +35,43 @@ import {
 } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   updateDocumentTitle,
   deleteDocument,
+  attachDocumentToAssignment,
 } from "@/server/actions/documents";
 import { updateDocumentTitleSchema } from "@/formSchemas/document";
-import { redirect } from "next/navigation";
+import { attachDocumentToAssignmentSchema } from "@/formSchemas/assignment";
 
 export function DocumentSettingsForm({
   documentId,
   title,
   isSubmitted,
+  isAttachedToAssignment,
+  attachedAssignmentTitle,
+  availableAssignments,
 }: {
   documentId: string;
   title: string;
   isSubmitted: boolean;
+  isAttachedToAssignment: boolean;
+  attachedAssignmentTitle?: string;
+  availableAssignments: Array<{ id: string; label: string }>;
 }) {
+  const router = useRouter();
   const form = useForm({
     resolver: yupResolver(updateDocumentTitleSchema),
     defaultValues: { title },
+  });
+  const assignmentForm = useForm({
+    resolver: yupResolver(attachDocumentToAssignmentSchema),
+    defaultValues: { assignmentId: "", documentId },
   });
 
   async function onSubmit(
@@ -65,7 +85,7 @@ export function DocumentSettingsForm({
       });
     }
 
-    redirect("/dashboard")
+    router.push("/dashboard");
   }
 
   async function onDelete() {
@@ -76,6 +96,20 @@ export function DocumentSettingsForm({
         message: "There was an error deleting this document.",
       });
     }
+  }
+
+  async function onAttachToAssignment(
+    values: yup.InferType<typeof attachDocumentToAssignmentSchema>,
+  ) {
+    const result = await attachDocumentToAssignment(documentId, values.assignmentId);
+    if (result.error) {
+      assignmentForm.setError("root", {
+        message: "This document could not be attached. It may already be assigned.",
+      });
+      return;
+    }
+
+    router.push(`/document/${documentId}`);
   }
 
   return (
@@ -134,6 +168,57 @@ export function DocumentSettingsForm({
               className="mt-4"
               errors={[form.formState.errors.root]}
             />
+          )}
+          {!isSubmitted && (
+            <section className="mt-8 border-t pt-6">
+              <div className="flex items-start gap-2">
+                <ClipboardList className="mt-0.5 size-4 text-[#567160]" />
+                <div>
+                  <h2 className="font-medium">Submit to an assignment</h2>
+                  <p className="mt-1 text-sm leading-5 text-muted-foreground">Use this existing draft for an assignment you&apos;ve joined.</p>
+                </div>
+              </div>
+              {isAttachedToAssignment ? (
+                <div className="mt-4 rounded-lg border border-[#bfd0c2] bg-[#f7faf7] px-3 py-3 text-sm text-[#315943]">
+                  <p>This document is attached to {attachedAssignmentTitle ? <span className="font-medium">{attachedAssignmentTitle}</span> : "an assignment"}.</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <Button size="sm" nativeButton={false} render={<Link href={`/document/${documentId}`} />}>Open document</Button>
+                    <Button size="sm" variant="outline" nativeButton={false} render={<Link href="/dashboard/assignments" />}>My assignments</Button>
+                  </div>
+                </div>
+              ) : availableAssignments.length === 0 ? (
+                <p className="mt-4 text-sm text-muted-foreground">Join an assignment first, then return here to use this draft for it.</p>
+              ) : (
+                <form className="mt-4" onSubmit={assignmentForm.handleSubmit(onAttachToAssignment)}>
+                  <FieldGroup>
+                    <Controller
+                      name="assignmentId"
+                      control={assignmentForm.control}
+                      render={({ field, fieldState }) => (
+                        <Field data-invalid={fieldState.invalid}>
+                          <FieldLabel htmlFor="assignment">Assignment</FieldLabel>
+                          <Select
+                            items={availableAssignments.map((assignment) => ({ label: assignment.label, value: assignment.id }))}
+                            value={field.value}
+                            onValueChange={(value) => field.onChange(value ?? "")}
+                          >
+                            <SelectTrigger id="assignment" className="w-full" aria-invalid={fieldState.invalid}>
+                              <SelectValue placeholder="Choose an assignment" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {availableAssignments.map((assignment) => <SelectItem key={assignment.id} value={assignment.id}>{assignment.label}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                          {fieldState.invalid && <FieldError errors={[fieldState.error]} />}
+                        </Field>
+                      )}
+                    />
+                    {assignmentForm.formState.errors.root && <FieldError errors={[assignmentForm.formState.errors.root]} />}
+                    <Button type="submit" disabled={assignmentForm.formState.isSubmitting}>Use this document</Button>
+                  </FieldGroup>
+                </form>
+              )}
+            </section>
           )}
         </CardContent>
         <CardFooter className="flex flex-wrap justify-between gap-3">
