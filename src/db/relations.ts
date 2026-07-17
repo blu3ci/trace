@@ -58,5 +58,15 @@ export const relations = defineRelations(schema, (r) => ({
       from: r.assignmentReceiptsTable.documentId,
       to: r.documentsTable.id,
     }),
+    legitimacyAnalysis: r.one.receiptLegitimacyAnalysesTable({
+      from: r.assignmentReceiptsTable.id,
+      to: r.receiptLegitimacyAnalysesTable.receiptId,
+    }),
+  },
+  receiptLegitimacyAnalysesTable: {
+    receipt: r.one.assignmentReceiptsTable({
+      from: r.receiptLegitimacyAnalysesTable.receiptId,
+      to: r.assignmentReceiptsTable.id,
+    }),
   },
 }));

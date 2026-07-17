@@ -11,6 +11,7 @@ import { ReceiptPdfDownloadButton } from "@/components/receipt/receipt-pdf-downl
 import { RevisionComparisonLink } from "@/components/receipt/revision-comparison-link";
 import { ReceiptPreview } from "./DynamicReceiptPreview";
 import { InstructorReceiptSelector } from "./instructor-receipt-selector";
+import { LegitimacyAnalysisCard } from "@/components/receipt/legitimacy-analysis-card";
 
 export const revalidate = 0;
 
@@ -21,7 +22,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
   const { submissionId } = await params;
   const submission = await db.query.assignmentSubmissionsTable.findFirst({
     where: { id: submissionId },
-    with: { assignment: true, receipt: true },
+    with: { assignment: true, receipt: { with: { legitimacyAnalysis: true } } },
   });
   if (!submission?.assignment || !submission.receipt) notFound();
 
@@ -102,6 +103,15 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
           <ReceiptStat icon={History} label="Revision milestones" value={String(receipt.revisionCount)} />
           <ReceiptStat icon={PencilLine} label="Final word count" value={receipt.finalWordCount.toLocaleString()} />
           <ReceiptStat icon={FileCheck2} label="Large pasted additions" value={bulkPasteWordCount ? `${bulkPasteWordCount.toLocaleString()} words` : "None"} />
+        </div>
+
+        <div className="mt-8">
+          <LegitimacyAnalysisCard
+            submissionId={submission.id}
+            initialAnalysis={receipt.legitimacyAnalysis
+              ? { ...receipt.legitimacyAnalysis.analysis, generatedAt: receipt.legitimacyAnalysis.updatedAt.toISOString() }
+              : undefined}
+          />
         </div>
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[0.72fr_1.28fr]">

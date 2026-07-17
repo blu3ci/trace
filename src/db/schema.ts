@@ -1,4 +1,5 @@
 import { Block } from "@blocknote/core";
+import type { LegitimacyAnalysis } from "@/lib/legitimacy-analysis";
 import {
   pgTable,
   uuid,
@@ -143,4 +144,19 @@ export const assignmentReceiptsTable = pgTable(
     uniqueIndex("assignment_receipts_submission_id_idx").on(t.submissionId),
     uniqueIndex("assignment_receipts_document_id_idx").on(t.documentId),
   ],
+);
+
+export const receiptLegitimacyAnalysesTable = pgTable(
+  "receipt_legitimacy_analyses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    receiptId: uuid("receipt_id")
+      .notNull()
+      .references(() => assignmentReceiptsTable.id, { onDelete: "cascade" }),
+    model: varchar("model", { length: 64 }).notNull(),
+    analysis: json("analysis").$type<LegitimacyAnalysis>().notNull(),
+    createdAt,
+    updatedAt,
+  },
+  (t) => [uniqueIndex("receipt_legitimacy_analyses_receipt_id_idx").on(t.receiptId)],
 );
