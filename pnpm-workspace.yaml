@@ -6,3 +6,8 @@ allowBuilds:
 ignoredBuiltDependencies:
   - sharp
   - unrs-resolver
+minimumReleaseAgeExclude:
+  - '@clerk/backend@3.11.7'
+  - '@clerk/nextjs@7.5.20'
+  - '@clerk/react@6.12.5'
+  - '@clerk/shared@4.25.5'
