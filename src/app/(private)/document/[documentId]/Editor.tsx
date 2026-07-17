@@ -93,7 +93,24 @@ export default function Editor({
   const editor = useCreateBlockNote({
     autofocus: true,
     initialContent: content ?? undefined,
-    tabBehavior: "prefer-indent",
+    _tiptapOptions: {
+      editorProps: {
+        handleKeyDown: (view, event) => {
+          if (
+            event.key !== "Tab"
+            || event.shiftKey
+            || event.altKey
+            || event.ctrlKey
+            || event.metaKey
+          ) {
+            return false;
+          }
+
+          view.dispatch(view.state.tr.insertText("\t"));
+          return true;
+        },
+      },
+    },
   });
 
   useEffect(() => {
@@ -610,7 +627,7 @@ function DocumentToolbar({ editor }: { editor: BlockNoteEditor }) {
           <ToolbarButton label="Decrease indentation (Shift+Tab)" disabled={!state.canOutdent} onClick={() => { focusEditor(); editor.unnestBlock(); }}>
             <ListIndentDecrease />
           </ToolbarButton>
-          <ToolbarButton label="Increase indentation (Tab)" disabled={!state.canIndent} onClick={() => { focusEditor(); editor.nestBlock(); }}>
+          <ToolbarButton label="Increase indentation" disabled={!state.canIndent} onClick={() => { focusEditor(); editor.nestBlock(); }}>
             <ListIndentIncrease />
           </ToolbarButton>
         </div>
