@@ -55,7 +55,7 @@ import {
 } from "@/components/ui/select";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type ClipboardEvent, useEffect, useRef, useState } from "react";
+import { type ClipboardEvent, type KeyboardEvent, useEffect, useRef, useState } from "react";
 
 const SAVE_DELAY = 1500;
 const BULK_PASTE_WORD_THRESHOLD = 50;
@@ -93,7 +93,6 @@ export default function Editor({
   const editor = useCreateBlockNote({
     autofocus: true,
     initialContent: content ?? undefined,
-    tabBehavior: "prefer-indent",
   });
 
   useEffect(() => {
@@ -243,6 +242,14 @@ export default function Editor({
     }
   };
 
+  const insertTabSpaces = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Tab" || event.shiftKey || event.altKey || event.ctrlKey || event.metaKey) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    editor.insertInlineContent("    ");
+  };
+
   // Renders the editor instance using a React component.
   return (
     <div className="flex flex-col h-screen overflow-hidden">
@@ -274,6 +281,7 @@ export default function Editor({
               if (!isSubmitted) recordEditingActivity();
             }}
             onPaste={recordBulkPaste}
+            onKeyDownCapture={insertTabSpaces}
             sideMenu={false}
             comments={false}
           />
