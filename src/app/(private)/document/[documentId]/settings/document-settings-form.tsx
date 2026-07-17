@@ -81,8 +81,9 @@ export function DocumentSettingsForm({
 
     if (result?.error) {
       form.setError("root", {
-        message: "There was an error updating this document.",
+        message: result.message ?? "There was an error updating this document.",
       });
+      return;
     }
 
     router.push("/dashboard");
@@ -93,7 +94,7 @@ export function DocumentSettingsForm({
 
     if (result?.error) {
       form.setError("root", {
-        message: "There was an error deleting this document.",
+        message: result.message ?? "There was an error deleting this document.",
       });
     }
   }
@@ -104,7 +105,7 @@ export function DocumentSettingsForm({
     const result = await attachDocumentToAssignment(documentId, values.assignmentId);
     if (result.error) {
       assignmentForm.setError("root", {
-        message: "This document could not be attached. It may already be assigned.",
+        message: result.message ?? "This document could not be attached. It may already be assigned.",
       });
       return;
     }

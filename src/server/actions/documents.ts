@@ -101,9 +101,9 @@ export async function createAssignmentSubmission(
 export async function attachDocumentToAssignment(
   unsafeDocumentId: string,
   unsafeAssignmentId: string,
-): Promise<{ error: boolean }> {
+): Promise<{ error: boolean; message?: string }> {
   const { userId } = await auth();
-  if (!userId) return { error: true };
+  if (!userId) return { error: true, message: "Sign in again before attaching this document." };
 
   let documentId: string;
   let assignmentId: string;
@@ -113,7 +113,7 @@ export async function attachDocumentToAssignment(
       assignmentId: unsafeAssignmentId,
     }));
   } catch {
-    return { error: true };
+    return { error: true, message: "Choose a valid assignment." };
   }
 
   const [document, membership, assignment, existingDocumentSubmission, existingAssignmentSubmission] = await Promise.all([
@@ -139,9 +139,11 @@ export async function attachDocumentToAssignment(
     }),
   ]);
 
-  if (!document || !membership || !assignment || assignment.archivedAt || existingDocumentSubmission || existingAssignmentSubmission) {
-    return { error: true };
-  }
+  if (!document) return { error: true, message: "This document is no longer available." };
+  if (!membership) return { error: true, message: "You are no longer enrolled in this assignment." };
+  if (!assignment || assignment.archivedAt) return { error: true, message: "This assignment is no longer active." };
+  if (existingDocumentSubmission) return { error: true, message: "This document is already attached to an assignment." };
+  if (existingAssignmentSubmission) return { error: true, message: "You already have a document for this assignment." };
 
   try {
     await db.insert(assignmentSubmissionsTable).values({
@@ -150,7 +152,7 @@ export async function attachDocumentToAssignment(
       clerkUserId: userId,
     });
   } catch {
-    return { error: true };
+    return { error: true, message: "We couldn’t attach this document. Please try again." };
   }
 
   revalidatePath("/dashboard");
@@ -261,10 +263,10 @@ export async function createDocument(
 export async function updateDocumentTitle(
   documentId: string,
   unsafeData: yup.InferType<typeof updateDocumentTitleSchema>,
-): Promise<{ error: boolean } | undefined> {
+): Promise<{ error: boolean; message?: string } | undefined> {
   const { userId } = await auth();
 
-  if (!userId) return { error: true };
+  if (!userId) return { error: true, message: "Sign in again before updating this document." };
 
   try {
     const { title } = await updateDocumentTitleSchema.validate(unsafeData);
@@ -280,9 +282,9 @@ export async function updateDocumentTitle(
         ),
       );
 
-    if (rowCount === 0) return { error: true };
+    if (rowCount === 0) return { error: true, message: "This document is locked, missing, or no longer editable." };
   } catch {
-    return { error: true };
+    return { error: true, message: "We couldn’t update the document title. Please try again." };
   }
 
   revalidatePath(`/document/${documentId}`);
@@ -291,10 +293,10 @@ export async function updateDocumentTitle(
   return { error: false };
 }
 
-export async function deleteDocument(documentId: string): Promise<{ error: boolean } | undefined> {
+export async function deleteDocument(documentId: string): Promise<{ error: boolean; message?: string } | undefined> {
   const { userId } = await auth();
 
-  if (!userId) return { error: true };
+  if (!userId) return { error: true, message: "Sign in again before deleting this document." };
 
   try {
     const { rowCount } = await db
@@ -307,9 +309,9 @@ export async function deleteDocument(documentId: string): Promise<{ error: boole
         ),
       );
 
-    if (rowCount === 0) return { error: true };
+    if (rowCount === 0) return { error: true, message: "This document is locked, missing, or no longer editable." };
   } catch {
-    return { error: true };
+    return { error: true, message: "We couldn’t delete this document. Please try again." };
   }
 
   revalidatePath("/dashboard");

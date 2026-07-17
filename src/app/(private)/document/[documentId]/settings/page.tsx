@@ -41,10 +41,10 @@ export default async function DocumentSettingsPage({
     ? []
     : await db.query.assignmentsTable.findMany({
       where: { id: { in: joinedAssignmentIds } },
-      columns: { course: true, id: true, title: true },
+      columns: { archivedAt: true, course: true, id: true, title: true },
     });
   const availableAssignments = assignments
-    .filter((assignment) => !submittedAssignmentIds.has(assignment.id))
+    .filter((assignment) => !assignment.archivedAt && !submittedAssignmentIds.has(assignment.id))
     .map((assignment) => ({
       id: assignment.id,
       label: assignment.course ? `${assignment.title} · ${assignment.course}` : assignment.title,

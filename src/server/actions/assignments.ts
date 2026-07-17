@@ -56,27 +56,29 @@ export async function createAssignment(
 
 export async function joinAssignment(
   unsafeData: yup.InferType<typeof joinAssignmentSchema>,
-): Promise<{ error: boolean }> {
+): Promise<{ error: boolean; message?: string }> {
   const { userId } = await auth();
-  if (!userId) return { error: true };
+  if (!userId) return { error: true, message: "Sign in again before joining an assignment." };
 
   try {
     const { accessCode } = await joinAssignmentSchema.validate(unsafeData);
-    if (!accessCode) return { error: true };
+    if (!accessCode) return { error: true, message: "Enter an assignment code." };
 
     const assignment = await db.query.assignmentsTable.findFirst({
       where: { accessCode },
       columns: { archivedAt: true, id: true, clerkUserId: true },
     });
 
-    if (!assignment || assignment.archivedAt || assignment.clerkUserId === userId) return { error: true };
+    if (!assignment) return { error: true, message: "We couldn’t find an assignment with that code." };
+    if (assignment.archivedAt) return { error: true, message: "This assignment is no longer accepting students." };
+    if (assignment.clerkUserId === userId) return { error: true, message: "You created this assignment. Open it from Instructor Assignments." };
 
     await db
       .insert(assignmentMembersTable)
       .values({ assignmentId: assignment.id, clerkUserId: userId })
       .onConflictDoNothing();
   } catch {
-    return { error: true };
+    return { error: true, message: "We couldn’t join that assignment. Please try again." };
   }
 
   revalidatePath("/dashboard/assignments");

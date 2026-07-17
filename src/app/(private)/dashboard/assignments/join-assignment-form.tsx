@@ -21,7 +21,7 @@ export function JoinAssignmentForm() {
 
     if (data.error) {
       form.setError("root", {
-        message: "We couldn’t find an assignment with that code.",
+        message: data.message ?? "We couldn’t join that assignment.",
       });
       return;
     }
