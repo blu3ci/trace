@@ -4,6 +4,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Block } from "@blocknote/core";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/db";
 import { canViewReceipt } from "@/lib/access-control";
@@ -36,7 +37,16 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
   const milestones = await db.query.documentMilestonesTable.findMany({
     where: { documentId: submission.documentId },
     orderBy: ({ createdAt }, { asc }) => asc(createdAt),
-    columns: { activeSeconds: true, blockCount: true, bulkPasteWordCount: true, content: true, createdAt: true, wordCount: true },
+    columns: {
+      activeSeconds: true,
+      blockCount: true,
+      bulkPasteWordCount: true,
+      content: true,
+      createdAt: true,
+      typedWordCount: true,
+      typingWordsPerMinute: true,
+      wordCount: true,
+    },
   });
   const receipt = submission.receipt;
   const milestoneSummaries = milestones.map((milestone, index) => ({
@@ -83,9 +93,10 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
             assignmentTitle={submission.assignment.title}
             bulkPasteWordCount={bulkPasteWordCount}
             finalWordCount={receipt.finalWordCount}
-            milestones={milestoneSummaries.map(({ createdAt, activeSeconds, summary }) => ({
+            milestones={milestoneSummaries.map(({ activeSeconds, bulkPasteWordCount, createdAt, summary, typedWordCount, typingWordsPerMinute }) => ({
               dateTime: formatDateTime(createdAt),
               duration: formatDuration(activeSeconds),
+              metadata: formatMilestoneMetadata({ bulkPasteWordCount, typedWordCount, typingWordsPerMinute }),
               text: summary.text,
               title: summary.title,
             }))}
@@ -128,7 +139,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
             <CardContent>
               <p className="text-sm leading-6 text-[#607067]">Each milestone describes the visible change in the draft since the previous saved moment.</p>
               <ol className="mt-5 space-y-4 border-l border-[#ced9d0] pl-4">
-                {milestoneSummaries.length === 0 ? <li className="text-sm text-[#69756d]">This submission was completed before receipt tracking began.</li> : milestoneSummaries.map((milestone, index) => <li key={`${milestone.createdAt.toISOString()}-${index}`} className="relative text-sm"><span className="absolute -left-[1.28rem] top-1.5 size-2 rounded-full bg-[#78a782]" /><p className="font-medium leading-5">{milestone.summary.title}</p><p className="mt-1 leading-5 text-[#607067]">{milestone.summary.text}</p><p className="mt-1 text-[#69756d]">{formatDateTime(milestone.createdAt)} · {formatDuration(milestone.activeSeconds)} active writing</p>{index > 0 && <div className="mt-3"><RevisionComparisonLink documentId={submission.documentId} previous={milestoneSummaries[index - 1]} current={milestone} /></div>}</li>)}
+                {milestoneSummaries.length === 0 ? <li className="text-sm text-[#69756d]">This submission was completed before receipt tracking began.</li> : milestoneSummaries.map((milestone, index) => <li key={`${milestone.createdAt.toISOString()}-${index}`} className="relative text-sm"><span className="absolute -left-[1.28rem] top-1.5 size-2 rounded-full bg-[#78a782]" /><p className="font-medium leading-5">{milestone.summary.title}</p><p className="mt-1 leading-5 text-[#607067]">{milestone.summary.text}</p><p className="mt-1 text-[#69756d]">{formatDateTime(milestone.createdAt)} · {formatDuration(milestone.activeSeconds)} active writing</p><MilestoneTags milestone={milestone} />{index > 0 && <div className="mt-3"><RevisionComparisonLink documentId={submission.documentId} previous={milestoneSummaries[index - 1]} current={milestone} /></div>}</li>)}
               </ol>
             </CardContent>
           </Card>
@@ -137,6 +148,35 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
       </div>
     </main>
   );
+}
+
+function MilestoneTags({ milestone }: { milestone: { bulkPasteWordCount: number; typedWordCount: number; typingWordsPerMinute: number } }) {
+  if (!milestone.bulkPasteWordCount && !milestone.typedWordCount && !milestone.typingWordsPerMinute) return null;
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5">
+      {milestone.bulkPasteWordCount > 0 && <Badge className="bg-[#fbf1df] text-[#7b5725]">Bulk paste · {milestone.bulkPasteWordCount.toLocaleString()} words</Badge>}
+      {milestone.typedWordCount > 0 && <Badge variant="outline" className="border-[#cfe0d2] bg-white text-[#42614a]">Typed · {milestone.typedWordCount.toLocaleString()} words</Badge>}
+      {milestone.typingWordsPerMinute > 0 && <Badge variant="outline" className="border-[#cfe0d2] bg-white text-[#42614a]">Est. {milestone.typingWordsPerMinute} WPM</Badge>}
+    </div>
+  );
+}
+
+function formatMilestoneMetadata({
+  bulkPasteWordCount,
+  typedWordCount,
+  typingWordsPerMinute,
+}: {
+  bulkPasteWordCount: number;
+  typedWordCount: number;
+  typingWordsPerMinute: number;
+}) {
+  const metadata = [
+    bulkPasteWordCount > 0 ? `Bulk paste: ${bulkPasteWordCount.toLocaleString()} words` : null,
+    typedWordCount > 0 ? `Typed: ${typedWordCount.toLocaleString()} words` : null,
+    typingWordsPerMinute > 0 ? `Estimated velocity: ${typingWordsPerMinute} WPM` : null,
+  ].filter(Boolean);
+  return metadata.length ? metadata.join(" · ") : undefined;
 }
 
 function ReceiptStat({ icon: Icon, label, value }: { icon: typeof Clock3; label: string; value: string }) {

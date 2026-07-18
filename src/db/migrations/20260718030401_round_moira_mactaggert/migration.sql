@@ -1,0 +1,2 @@
+ALTER TABLE "document_milestones" ADD COLUMN "typed_word_count" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE "document_milestones" ADD COLUMN "typing_words_per_minute" integer DEFAULT 0 NOT NULL;

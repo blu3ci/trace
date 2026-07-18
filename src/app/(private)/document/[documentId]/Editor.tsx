@@ -48,6 +48,11 @@ import { en } from "@blocknote/core/locales";
 import { Input } from "@/components/ui/input";
 import { documentPdfSchemaMappings } from "@/lib/document-pdf";
 import {
+  calculateTypingWordsPerMinute,
+  countTextWords,
+  detectBulkPasteWordCount,
+} from "@/lib/milestone-metadata";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -59,7 +64,6 @@ import { useRouter } from "next/navigation";
 import { type ClipboardEvent, useEffect, useRef, useState } from "react";
 
 const SAVE_DELAY = 1500;
-const BULK_PASTE_WORD_THRESHOLD = 50;
 const MEANINGFUL_CHANGE_WORD_THRESHOLD = 12;
 
 export default function Editor({
@@ -86,7 +90,12 @@ export default function Editor({
   const lastInteractionAt = useRef<number | null>(null);
   const lastMilestoneAt = useRef<number | null>(null);
   const lastMilestoneText = useRef(normalizeDocumentText(extractText(content ?? [])));
+  const lastObservedDocumentText = useRef(normalizeDocumentText(extractText(content ?? [])));
+  const lastObservedWordCount = useRef(countDocumentWords(content ?? []));
+  const lastDocumentChangeAt = useRef<number | null>(null);
+  const pendingClipboardPasteWordCount = useRef(0);
   const pendingBulkPasteWordCount = useRef(0);
+  const pendingTypedWordCount = useRef(0);
   const latestSaveRequest = useRef(0);
   const saveQueue = useRef(Promise.resolve());
   const pendingSaveTimer = useRef<number | null>(null);
@@ -132,6 +141,7 @@ export default function Editor({
       const documentText = normalizeDocumentText(extractText(document));
       const activeMillisAtSave = activeMillis.current;
       const bulkPasteWordCountAtSave = pendingBulkPasteWordCount.current;
+      const typedWordCountAtSave = pendingTypedWordCount.current;
       const shouldCaptureMilestone = wordCount > 0 && (
         !hasCapturedMilestone.current
         || bulkPasteWordCountAtSave > 0
@@ -145,6 +155,11 @@ export default function Editor({
           activeSeconds: Math.round(activeMillisAtSave / 1000),
           blockCount: document.length,
           bulkPasteWordCount: bulkPasteWordCountAtSave,
+          typedWordCount: typedWordCountAtSave,
+          typingWordsPerMinute: calculateTypingWordsPerMinute(
+            typedWordCountAtSave,
+            Math.round(activeMillisAtSave / 1000),
+          ),
           wordCount,
         }
         : undefined;
@@ -165,6 +180,7 @@ export default function Editor({
               0,
               pendingBulkPasteWordCount.current - bulkPasteWordCountAtSave,
             );
+            pendingTypedWordCount.current = Math.max(0, pendingTypedWordCount.current - typedWordCountAtSave);
           }
           if (latestSaveRequest.current === saveRequest) setSaveStatus("saved");
         } catch {
@@ -196,8 +212,24 @@ export default function Editor({
     setSaveRequest(latestSaveRequest.current);
   };
 
-  const recordEditingActivity = () => {
+  const recordEditingActivity = (document: Block[]) => {
     const now = Date.now();
+    const documentText = normalizeDocumentText(extractText(document));
+    const wordCount = countDocumentWords(document);
+    const bulkPasteWordCount = detectBulkPasteWordCount({
+      clipboardWordCount: pendingClipboardPasteWordCount.current,
+      currentText: documentText,
+      elapsedMs: lastDocumentChangeAt.current ? now - lastDocumentChangeAt.current : Number.POSITIVE_INFINITY,
+      previousText: lastObservedDocumentText.current,
+    });
+    const addedWordCount = Math.max(0, wordCount - lastObservedWordCount.current);
+    if (bulkPasteWordCount > 0) pendingBulkPasteWordCount.current += bulkPasteWordCount;
+    pendingTypedWordCount.current += Math.max(0, addedWordCount - bulkPasteWordCount);
+    pendingClipboardPasteWordCount.current = 0;
+    lastObservedDocumentText.current = documentText;
+    lastObservedWordCount.current = wordCount;
+    lastDocumentChangeAt.current = now;
+
     const previousInteraction = lastInteractionAt.current;
     if (previousInteraction && now - previousInteraction < 15_000) {
       activeMillis.current += now - previousInteraction;
@@ -225,11 +257,17 @@ export default function Editor({
       const documentText = normalizeDocumentText(extractText(document));
       const activeMillisAtSave = activeMillis.current;
       const bulkPasteWordCountAtSave = pendingBulkPasteWordCount.current;
+      const typedWordCountAtSave = pendingTypedWordCount.current;
       const milestone = wordCount > 0
         ? {
           activeSeconds: Math.round(activeMillisAtSave / 1000),
           blockCount: document.length,
           bulkPasteWordCount: bulkPasteWordCountAtSave,
+          typedWordCount: typedWordCountAtSave,
+          typingWordsPerMinute: calculateTypingWordsPerMinute(
+            typedWordCountAtSave,
+            Math.round(activeMillisAtSave / 1000),
+          ),
           wordCount,
         }
         : undefined;
@@ -246,6 +284,7 @@ export default function Editor({
           0,
           pendingBulkPasteWordCount.current - bulkPasteWordCountAtSave,
         );
+        pendingTypedWordCount.current = Math.max(0, pendingTypedWordCount.current - typedWordCountAtSave);
       }
 
       const submissionResult = await submitAssignmentSubmission(assignmentId);
@@ -263,9 +302,7 @@ export default function Editor({
 
   const recordBulkPaste = (event: ClipboardEvent<HTMLDivElement>) => {
     const pastedWordCount = countTextWords(event.clipboardData.getData("text/plain"));
-    if (pastedWordCount >= BULK_PASTE_WORD_THRESHOLD) {
-      pendingBulkPasteWordCount.current += pastedWordCount;
-    }
+    pendingClipboardPasteWordCount.current += pastedWordCount;
   };
 
   // Renders the editor instance using a React component.
@@ -289,16 +326,15 @@ export default function Editor({
       />
       {!isSubmitted && <DocumentToolbar editor={editor} />}
       <div className="h-full overflow-y-auto py-2">
-        <div className="max-w-250 min-h-full p-8 shadow-sm mx-auto">
+        <div className="max-w-250 min-h-full p-8 shadow-sm mx-auto" onPasteCapture={recordBulkPaste}>
           <BlockNoteView
             editor={editor}
             theme="light"
             editable={!isSubmitted}
             // formattingToolbar={false}
             onChange={() => {
-              if (!isSubmitted) recordEditingActivity();
+              if (!isSubmitted) recordEditingActivity(editor.document);
             }}
-            onPaste={recordBulkPaste}
             sideMenu={false}
             comments={false}
           />
@@ -310,14 +346,6 @@ export default function Editor({
 
 function countDocumentWords(blocks: Block[]) {
   return countTextWords(extractText(blocks));
-}
-
-function countTextWords(value: string) {
-  return value
-    .replace(/[^\p{L}\p{N}]+/gu, " ")
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean).length;
 }
 
 function extractText(value: unknown): string {

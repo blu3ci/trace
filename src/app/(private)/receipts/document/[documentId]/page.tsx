@@ -5,6 +5,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { db } from "@/db";
 import { RevisionComparisonLink } from "@/components/receipt/revision-comparison-link";
@@ -31,7 +32,15 @@ export default async function DocumentReceiptPage({ params }: { params: Promise<
   const milestones = await db.query.documentMilestonesTable.findMany({
     where: { documentId },
     orderBy: ({ createdAt }, { asc }) => asc(createdAt),
-    columns: { activeSeconds: true, bulkPasteWordCount: true, content: true, createdAt: true, wordCount: true },
+    columns: {
+      activeSeconds: true,
+      bulkPasteWordCount: true,
+      content: true,
+      createdAt: true,
+      typedWordCount: true,
+      typingWordsPerMinute: true,
+      wordCount: true,
+    },
   });
   const activeSeconds = milestones.reduce((total, milestone) => total + milestone.activeSeconds, 0);
 
@@ -72,13 +81,25 @@ export default async function DocumentReceiptPage({ params }: { params: Promise<
             <CardHeader><CardTitle className="flex items-center gap-2"><FileCheck2 className="size-4 text-[#315943]" /> Writing journey</CardTitle></CardHeader>
             <CardContent>
               <p className="text-sm leading-6 text-[#607067]">Milestones are captured as you save changes to this document.</p>
-              {milestones.length === 0 ? <p className="mt-5 text-sm text-[#69756d]">No writing milestones have been saved yet.</p> : <ol className="mt-5 space-y-4 border-l border-[#ced9d0] pl-4">{milestones.map((milestone, index) => <li key={`${milestone.createdAt.toISOString()}-${index}`} className="relative text-sm"><span className="absolute -left-[1.28rem] top-1.5 size-2 rounded-full bg-[#78a782]" /><p className="font-medium leading-5">{milestone.bulkPasteWordCount > 0 ? `Saved after a ${milestone.bulkPasteWordCount.toLocaleString()}-word paste` : `Saved at ${milestone.wordCount.toLocaleString()} words`}</p><p className="mt-1 text-[#69756d]">{formatDateTime(milestone.createdAt)} · {formatDuration(milestone.activeSeconds)} active writing</p>{index > 0 && <div className="mt-3"><RevisionComparisonLink documentId={document.id} previous={milestones[index - 1]} current={milestone} /></div>}</li>)}</ol>}
+              {milestones.length === 0 ? <p className="mt-5 text-sm text-[#69756d]">No writing milestones have been saved yet.</p> : <ol className="mt-5 space-y-4 border-l border-[#ced9d0] pl-4">{milestones.map((milestone, index) => <li key={`${milestone.createdAt.toISOString()}-${index}`} className="relative text-sm"><span className="absolute -left-[1.28rem] top-1.5 size-2 rounded-full bg-[#78a782]" /><p className="font-medium leading-5">{milestone.bulkPasteWordCount > 0 ? `Saved after a ${milestone.bulkPasteWordCount.toLocaleString()}-word paste` : `Saved at ${milestone.wordCount.toLocaleString()} words`}</p><p className="mt-1 text-[#69756d]">{formatDateTime(milestone.createdAt)} · {formatDuration(milestone.activeSeconds)} active writing</p><MilestoneTags milestone={milestone} />{index > 0 && <div className="mt-3"><RevisionComparisonLink documentId={document.id} previous={milestones[index - 1]} current={milestone} /></div>}</li>)}</ol>}
             </CardContent>
           </Card>
           <ReceiptPreview title={document.title} content={document.content ?? []} />
         </div>
       </div>
     </main>
+  );
+}
+
+function MilestoneTags({ milestone }: { milestone: { bulkPasteWordCount: number; typedWordCount: number; typingWordsPerMinute: number } }) {
+  if (!milestone.bulkPasteWordCount && !milestone.typedWordCount && !milestone.typingWordsPerMinute) return null;
+
+  return (
+    <div className="mt-2 flex flex-wrap gap-1.5">
+      {milestone.bulkPasteWordCount > 0 && <Badge className="bg-[#fbf1df] text-[#7b5725]">Bulk paste · {milestone.bulkPasteWordCount.toLocaleString()} words</Badge>}
+      {milestone.typedWordCount > 0 && <Badge variant="outline" className="border-[#cfe0d2] bg-white text-[#42614a]">Typed · {milestone.typedWordCount.toLocaleString()} words</Badge>}
+      {milestone.typingWordsPerMinute > 0 && <Badge variant="outline" className="border-[#cfe0d2] bg-white text-[#42614a]">Est. {milestone.typingWordsPerMinute} WPM</Badge>}
+    </div>
   );
 }
 

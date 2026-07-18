@@ -325,7 +325,14 @@ export async function deleteDocument(documentId: string): Promise<{ error: boole
 export async function saveDocument(
   documentId: string,
   jsonBlocks: Block[],
-  milestone?: { activeSeconds: number; blockCount: number; bulkPasteWordCount: number; wordCount: number },
+  milestone?: {
+    activeSeconds: number;
+    blockCount: number;
+    bulkPasteWordCount: number;
+    typedWordCount: number;
+    typingWordsPerMinute: number;
+    wordCount: number;
+  },
 ) {
   const { userId } = await auth();
 
@@ -351,17 +358,35 @@ export async function saveDocument(
       blockCount: milestone.blockCount,
       bulkPasteWordCount: milestone.bulkPasteWordCount,
       content: jsonBlocks,
+      typedWordCount: milestone.typedWordCount,
+      typingWordsPerMinute: milestone.typingWordsPerMinute,
       wordCount: milestone.wordCount,
     });
   }
 }
 
-function isValidMilestone(milestone: { activeSeconds: number; blockCount: number; bulkPasteWordCount: number; wordCount: number }) {
-  return [milestone.activeSeconds, milestone.blockCount, milestone.bulkPasteWordCount, milestone.wordCount]
+function isValidMilestone(milestone: {
+  activeSeconds: number;
+  blockCount: number;
+  bulkPasteWordCount: number;
+  typedWordCount: number;
+  typingWordsPerMinute: number;
+  wordCount: number;
+}) {
+  return [
+    milestone.activeSeconds,
+    milestone.blockCount,
+    milestone.bulkPasteWordCount,
+    milestone.typedWordCount,
+    milestone.typingWordsPerMinute,
+    milestone.wordCount,
+  ]
     .every((value) => Number.isInteger(value) && value >= 0)
     && milestone.activeSeconds <= 90 * 60
     && milestone.blockCount <= 100_000
     && milestone.bulkPasteWordCount <= 1_000_000
+    && milestone.typedWordCount <= 1_000_000
+    && milestone.typingWordsPerMinute <= 100_000
     && milestone.wordCount <= 1_000_000;
 }
 

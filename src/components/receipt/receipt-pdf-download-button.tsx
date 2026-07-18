@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 type ReceiptMilestone = {
   dateTime: string;
   duration: string;
+  metadata?: string;
   text: string;
   title: string;
 };
@@ -99,6 +100,7 @@ export function ReceiptPdfDocument({
                 <Text style={styles.milestoneTitle}>{milestone.title}</Text>
                 <Text style={styles.milestoneText}>{milestone.text}</Text>
                 <Text style={styles.milestoneMeta}>{milestone.dateTime} - {milestone.duration} active writing</Text>
+                {milestone.metadata && <Text style={styles.milestoneMeta}>{milestone.metadata}</Text>}
               </View>
             ))
           )}

@@ -130,6 +130,8 @@ export async function generateDocumentLegitimacyAnalysis(
       bulkPasteWordCount: true,
       content: true,
       createdAt: true,
+      typedWordCount: true,
+      typingWordsPerMinute: true,
       wordCount: true,
     },
   });
@@ -231,6 +233,8 @@ function buildAnalysisInput({
     bulkPasteWordCount: number;
     content: Block[] | null;
     createdAt: Date;
+    typedWordCount: number;
+    typingWordsPerMinute: number;
     wordCount: number;
   }>;
 }) {
@@ -248,6 +252,8 @@ function buildAnalysisInput({
       blockCount: milestone.blockCount,
       activeSeconds: milestone.activeSeconds,
       bulkPasteWordCount: milestone.bulkPasteWordCount,
+      typedWordCount: milestone.typedWordCount,
+      typingWordsPerMinute: milestone.typingWordsPerMinute,
       citationSignals,
     };
   });
@@ -277,6 +283,8 @@ function buildAnalysisInput({
       revisionCount: receipt?.revisionCount ?? milestones.length,
       recordedActiveSeconds: totalActiveSeconds,
       milestonesWithRecordedActiveTime: timeline.filter((milestone) => milestone.activeSeconds > 0).length,
+      recordedTypedWordCount: timeline.reduce((total, milestone) => total + milestone.typedWordCount, 0),
+      milestonesWithTypingVelocity: timeline.filter((milestone) => milestone.typingWordsPerMinute > 0).length,
       bulkPasteEventCount: bulkPasteEvents.length,
       totalBulkPasteWordCount: bulkPasteEvents.reduce(
         (total, milestone) => total + milestone.bulkPasteWordCount,
