@@ -10,6 +10,7 @@ import { regenerateAssignmentAccessCode } from "@/server/actions/assignments";
 export function AssignmentCode({ code, assignmentId }: { code: string; assignmentId?: string }) {
   const [copied, setCopied] = useState(false);
   const [currentCode, setCurrentCode] = useState(code);
+  const [isRegenerateDialogOpen, setIsRegenerateDialogOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   async function copyCode() {
@@ -26,7 +27,10 @@ export function AssignmentCode({ code, assignmentId }: { code: string; assignmen
     if (!assignmentId) return;
     startTransition(async () => {
       const result = await regenerateAssignmentAccessCode(assignmentId);
-      if (!result.error && result.code) setCurrentCode(result.code);
+      if (!result.error && result.code) {
+        setCurrentCode(result.code);
+        setIsRegenerateDialogOpen(false);
+      }
     });
   }
 
@@ -47,13 +51,13 @@ export function AssignmentCode({ code, assignmentId }: { code: string; assignmen
           {copied ? <Check /> : <Copy />}
         </Button>
       </div>
-      {assignmentId && <AlertDialog>
+      {assignmentId && <AlertDialog open={isRegenerateDialogOpen} onOpenChange={setIsRegenerateDialogOpen}>
         <AlertDialogTrigger render={<Button type="button" size="sm" variant="outline" disabled={isPending} />}>
           <RefreshCw className={isPending ? "animate-spin" : ""} /> Regenerate
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader><AlertDialogTitle>Regenerate assignment code?</AlertDialogTitle><AlertDialogDescription>Students will need the new code to join. Students who already joined will keep their access.</AlertDialogDescription></AlertDialogHeader>
-          <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={regenerateCode}>Regenerate code</AlertDialogAction></AlertDialogFooter>
+          <AlertDialogFooter><AlertDialogCancel disabled={isPending}>Cancel</AlertDialogCancel><AlertDialogAction disabled={isPending} onClick={regenerateCode}>Regenerate code</AlertDialogAction></AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>}
     </div>

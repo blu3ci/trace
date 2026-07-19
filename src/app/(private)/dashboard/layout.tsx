@@ -22,21 +22,21 @@ export default async function DashboardLayout({
         >
           <Logo />
           <div className="hidden md:flex gap-8">
-            <Button
+            {role !== "instructor" && <Button
               variant={"link"}
               nativeButton={false}
               render={<Link href={"/dashboard"} />}
             >
               My Documents
-            </Button>
+            </Button>}
             {role === "student" && <Button variant={"link"} nativeButton={false} render={<Link href={"/dashboard/assignments"} />}>My Assignments</Button>}
             {role === "instructor" && <Button variant={"link"} nativeButton={false} render={<Link href={"/dashboard/assignments/instructor"} />}>Instructor Assignments</Button>}
           </div>
 
-          <div className="flex items-center gap-1"><Button className="hidden md:inline-flex" variant="link" nativeButton={false} render={<Link href="/dashboard/how-it-works" />}>How Trace works</Button><UserButton /></div>
+          <div className="flex items-center gap-1"><Button className="hidden md:inline-flex" variant="link" nativeButton={false} render={<Link href="/dashboard/how-it-works" />}>How trace works</Button><UserButton /></div>
         </nav>
         <nav className="container mx-auto flex gap-1 overflow-x-auto px-5 pb-3 sm:px-8 md:hidden" aria-label="Workspace navigation">
-          <Button size="sm" variant="outline" nativeButton={false} render={<Link href="/dashboard" />}><FileText /> Documents</Button>
+          {role !== "instructor" && <Button size="sm" variant="outline" nativeButton={false} render={<Link href="/dashboard" />}><FileText /> Documents</Button>}
           {role === "student" && <Button size="sm" variant="outline" nativeButton={false} render={<Link href="/dashboard/assignments" />}><ClipboardList /> Assignments</Button>}
           {role === "instructor" && <Button size="sm" variant="outline" nativeButton={false} render={<Link href="/dashboard/assignments/instructor" />}><ClipboardList /> Teaching</Button>}
           <Button size="sm" variant="outline" nativeButton={false} render={<Link href="/dashboard/how-it-works" />}><BookOpen /> How it works</Button>

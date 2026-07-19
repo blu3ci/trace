@@ -13,6 +13,10 @@ import { receiptLegitimacyAnalysesTable } from "@/db/schema";
 import { receiptLegitimacyAnalysisSchema } from "@/formSchemas/receipt-legitimacy-analysis";
 import { receiptLegitimacyAnalysisInstructions } from "@/lib/legitimacy-analysis-prompt";
 import {
+  applyPasteCoverageGuardrail,
+  applyWritingRateCoverageGuardrail,
+} from "@/lib/legitimacy-analysis-guardrails";
+import {
   getLegitimacyAnalysisRefreshState,
   isLegitimacyAnalysis,
   type LegitimacyAnalysis,
@@ -117,7 +121,6 @@ export async function generateDocumentLegitimacyAnalysis(
   const contentHash = hashDocumentBody(document.content);
   const refreshState = getLegitimacyAnalysisRefreshState({
     analysis: document.legitimacyAnalysis,
-    contentHash,
   });
   if (!refreshState.canRefresh) return { error: true, message: refreshState.message };
 
@@ -143,18 +146,19 @@ export async function generateDocumentLegitimacyAnalysis(
 
   let analysis: LegitimacyAnalysis;
   try {
+    const analysisInput = buildAnalysisInput({
+      document,
+      assignment: submission?.assignment,
+      receipt: submission?.receipt,
+      milestones,
+    });
     const response = await getOpenAIClient(apiKey).responses.create({
       model: ANALYSIS_MODEL,
       store: false,
       reasoning: { effort: "low" },
       max_output_tokens: 4_000,
       instructions: receiptLegitimacyAnalysisInstructions,
-      input: JSON.stringify(buildAnalysisInput({
-        document,
-        assignment: submission?.assignment,
-        receipt: submission?.receipt,
-        milestones,
-      })),
+      input: JSON.stringify(analysisInput),
       text: {
         format: {
           type: "json_schema",
@@ -180,7 +184,10 @@ export async function generateDocumentLegitimacyAnalysis(
 
     const parsed = JSON.parse(response.output_text) as unknown;
     if (!isLegitimacyAnalysis(parsed)) throw new Error("The response did not match the expected analysis format.");
-    analysis = parsed;
+    analysis = applyWritingRateCoverageGuardrail(
+      applyPasteCoverageGuardrail(parsed, analysisInput.analysisFacts),
+      analysisInput.analysisFacts,
+    );
   } catch (error) {
     console.error("Unable to generate document legitimacy analysis", error);
     return { error: true, message: "The AI analysis is unavailable right now. Please try again." };
@@ -249,6 +256,9 @@ function buildAnalysisInput({
       savedAt: milestone.createdAt.toISOString(),
       wordCount: milestone.wordCount,
       wordChangeFromPrevious: previous ? milestone.wordCount - previous.wordCount : milestone.wordCount,
+      recordedWordsPerMinute: milestone.activeSeconds > 0
+        ? Math.round((Math.max(0, previous ? milestone.wordCount - previous.wordCount : milestone.wordCount) * 60) / milestone.activeSeconds)
+        : 0,
       blockCount: milestone.blockCount,
       activeSeconds: milestone.activeSeconds,
       bulkPasteWordCount: milestone.bulkPasteWordCount,
@@ -270,6 +280,11 @@ function buildAnalysisInput({
     0,
   );
   const finalCitationSignals = extractCitationSignals(finalText, 12);
+  const rapidRecordedAdditions = timeline.filter((milestone) => (
+    milestone.wordChangeFromPrevious >= 75
+    && milestone.activeSeconds > 0
+    && milestone.recordedWordsPerMinute >= 250
+  ));
 
   return {
     assignment: {
@@ -294,6 +309,11 @@ function buildAnalysisInput({
       milestonesAfterLastBulkPaste: bulkPasteEvents.length
         ? timeline.length - bulkPasteEvents.at(-1)!.milestone
         : 0,
+      rapidRecordedAdditionCount: rapidRecordedAdditions.length,
+      fastestRecordedWordsPerMinute: rapidRecordedAdditions.reduce(
+        (fastest, milestone) => Math.max(fastest, milestone.recordedWordsPerMinute),
+        0,
+      ),
       citationSignalCount,
       milestonesWithCitationSignals: timeline.filter((milestone) => milestone.citationSignals.length > 0).length,
       finalCitationSignalCount: finalCitationSignals.length,

@@ -6,6 +6,7 @@ import { notFound } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { db } from "@/db";
+import { findRevisionChanges } from "@/lib/revision-diff";
 import { ReceiptPreview } from "../../[submissionId]/DynamicReceiptPreview";
 
 export const revalidate = 0;
@@ -43,7 +44,7 @@ export default async function RevisionComparisonPage({
   if (!previous?.content || !current?.content) notFound();
 
   const backHref = submission?.receipt ? `/receipts/${submission.id}` : `/receipts/document/${documentId}`;
-  const changes = findChanges(previous.content, current.content);
+  const changes = findRevisionChanges(previous.content as Block[], current.content as Block[]);
 
   return (
     <main className="min-h-screen bg-[#f7f8f7] pb-14 text-[#1d2521]">
@@ -81,46 +82,4 @@ function formatDateTime(value: Date) { return new Intl.DateTimeFormat("en", { da
 
 function ChangeList({ icon: Icon, title, entries, className }: { icon: typeof Plus; title: string; entries: string[]; className: string }) {
   return <section className={`rounded-lg border p-4 ${className}`}><h3 className="flex items-center gap-1.5 font-medium"><Icon className="size-4" /> {title}</h3>{entries.length === 0 ? <p className="mt-3 text-sm opacity-70">None</p> : <ul className="mt-3 space-y-2 text-sm leading-6">{entries.map((entry, index) => <li key={`${entry}-${index}`} className="rounded bg-white/60 p-2">{entry}</li>)}</ul>}</section>;
-}
-
-function findChanges(previousContent: Block[], currentContent: Block[]) {
-  const previous = blockTexts(previousContent);
-  const current = blockTexts(currentContent);
-  const previousOnly = previous.filter((block) => !current.some((currentBlock) => sameBlock(block, currentBlock)));
-  const currentOnly = current.filter((block) => !previous.some((previousBlock) => sameBlock(block, previousBlock)));
-  const removed: string[] = [];
-  const added: string[] = [];
-
-  const pairedBlocks = Math.min(previousOnly.length, currentOnly.length);
-  for (let index = 0; index < pairedBlocks; index += 1) {
-    const sentenceChanges = findSentenceChanges(previousOnly[index], currentOnly[index]);
-    removed.push(...sentenceChanges.removed);
-    added.push(...sentenceChanges.added);
-  }
-
-  return {
-    removed: [...removed, ...previousOnly.slice(pairedBlocks).flatMap(splitSentences)],
-    added: [...added, ...currentOnly.slice(pairedBlocks).flatMap(splitSentences)],
-  };
-}
-
-function blockTexts(blocks: Block[]) { return blocks.map((block) => extractText((block as unknown as { content: unknown }).content)).filter(Boolean); }
-function extractText(value: unknown): string { if (Array.isArray(value)) return value.map(extractText).join(" "); if (!value || typeof value !== "object") return ""; const record = value as { content?: unknown; text?: unknown }; return typeof record.text === "string" ? record.text : extractText(record.content); }
-function sameBlock(first: string, second: string) { return first.replace(/\s+/g, " ").trim().toLocaleLowerCase() === second.replace(/\s+/g, " ").trim().toLocaleLowerCase(); }
-
-function findSentenceChanges(previous: string, current: string) {
-  const previousSentences = splitSentences(previous);
-  const currentSentences = splitSentences(current);
-  return {
-    removed: previousSentences.filter((sentence) => !currentSentences.some((currentSentence) => sameSentence(sentence, currentSentence))),
-    added: currentSentences.filter((sentence) => !previousSentences.some((previousSentence) => sameSentence(sentence, previousSentence))),
-  };
-}
-
-function splitSentences(value: string) {
-  return value.replace(/\s+/g, " ").trim().match(/[^.!?]+(?:[.!?]+(?=\s|$)|$)/g)?.map((sentence) => sentence.trim()).filter(Boolean) ?? [];
-}
-
-function sameSentence(first: string, second: string) {
-  return first.replace(/\s+/g, " ").trim().toLocaleLowerCase() === second.replace(/\s+/g, " ").trim().toLocaleLowerCase();
 }

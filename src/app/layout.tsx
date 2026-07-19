@@ -3,7 +3,7 @@ import "./globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
 
 export const metadata: Metadata = {
-  title: "Trace",
+  title: "trace",
   description: "Version control for human writing",
 };
 

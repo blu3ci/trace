@@ -16,7 +16,9 @@ import { LegitimacyAnalysisCard } from "@/components/receipt/legitimacy-analysis
 import {
   getLegitimacyAnalysisRefreshState,
 } from "@/lib/legitimacy-analysis";
-import { hashDocumentBody } from "@/lib/legitimacy-analysis.server";
+import { applyPasteCoverageGuardrail } from "@/lib/legitimacy-analysis-guardrails";
+import { findRevisionChanges } from "@/lib/revision-diff";
+import { hasUserRole } from "@/lib/user-role";
 
 export const revalidate = 0;
 
@@ -33,6 +35,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
 
   const isInstructor = submission.assignment.clerkUserId === userId;
   if (!canViewReceipt({ viewerId: userId, studentId: submission.clerkUserId, assignmentOwnerId: submission.assignment.clerkUserId })) notFound();
+  const canViewAiSummary = isInstructor && await hasUserRole(userId, "instructor");
 
   const milestones = await db.query.documentMilestonesTable.findMany({
     where: { documentId: submission.documentId },
@@ -49,14 +52,26 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
     },
   });
   const receipt = submission.receipt;
-  const milestoneSummaries = milestones.map((milestone, index) => ({
-    ...milestone,
-    summary: summarizeMilestone(milestone, milestones[index - 1]),
-  }));
+  const milestoneSummaries = milestones.map((milestone, index) => {
+    const previous = milestones[index - 1];
+    return {
+      ...milestone,
+      changes: previous?.content && milestone.content
+        ? findRevisionChanges(previous.content as Block[], milestone.content as Block[])
+        : undefined,
+      summary: summarizeMilestone(milestone, previous),
+    };
+  });
   const bulkPasteWordCount = milestones.reduce(
     (total, milestone) => total + milestone.bulkPasteWordCount,
     0,
   );
+  const displayedAnalysis = submission.document.legitimacyAnalysis
+    ? applyPasteCoverageGuardrail(submission.document.legitimacyAnalysis.analysis, {
+      finalWordCount: receipt.finalWordCount,
+      totalBulkPasteWordCount: bulkPasteWordCount,
+    })
+    : undefined;
   const backHref = isInstructor ? `/dashboard/assignments/instructor/${submission.assignmentId}` : "/dashboard/assignments";
   const assignmentReceipts = isInstructor
     ? await db.query.assignmentSubmissionsTable.findMany({
@@ -90,6 +105,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
           </div>
           <ReceiptPdfDownloadButton
             activeWritingTime={formatDuration(receipt.activeSeconds)}
+            analysis={canViewAiSummary ? displayedAnalysis : undefined}
             assignmentTitle={submission.assignment.title}
             bulkPasteWordCount={bulkPasteWordCount}
             finalWordCount={receipt.finalWordCount}
@@ -120,18 +136,18 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
           <ReceiptStat icon={FileCheck2} label="Large pasted additions" value={bulkPasteWordCount ? `${bulkPasteWordCount.toLocaleString()} words` : "None"} />
         </div>
 
-        <div className="mt-8">
+        {canViewAiSummary && <div className="mt-8">
           <LegitimacyAnalysisCard
             documentId={submission.documentId}
-            initialAnalysis={submission.document.legitimacyAnalysis
-              ? { ...submission.document.legitimacyAnalysis.analysis, generatedAt: submission.document.legitimacyAnalysis.updatedAt.toISOString() }
+            initialAnalysis={displayedAnalysis
+              ? { ...displayedAnalysis, generatedAt: submission.document.legitimacyAnalysis!.updatedAt.toISOString() }
               : undefined}
             initialRefreshState={getLegitimacyAnalysisRefreshState({
               analysis: submission.document.legitimacyAnalysis,
-              contentHash: hashDocumentBody(submission.document.content),
             })}
+            milestoneCount={milestones.length}
           />
-        </div>
+        </div>}
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[0.72fr_1.28fr]">
           <Card className="h-fit border-[#dbe3dc] bg-[#f9fbf9]">

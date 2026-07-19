@@ -79,10 +79,15 @@ export async function joinAssignment(
       return { error: true, message: "You created this assignment. Open it from Instructor Assignments." };
     }
 
-    await db
+    const membership = await db
       .insert(assignmentMembersTable)
       .values({ assignmentId: assignment.id, clerkUserId: userId })
-      .onConflictDoNothing();
+      .onConflictDoNothing()
+      .returning({ assignmentId: assignmentMembersTable.assignmentId });
+
+    if (membership.length === 0) {
+      return { error: true, message: "You’ve already joined this assignment." };
+    }
   } catch {
     return { error: true, message: "We couldn’t join that assignment. Please try again." };
   }

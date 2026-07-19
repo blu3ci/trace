@@ -37,21 +37,12 @@ export const LEGITIMACY_ANALYSIS_COOLDOWN_MS = 10 * 60 * 1000;
 
 export function getLegitimacyAnalysisRefreshState({
   analysis,
-  contentHash,
   now = new Date(),
 }: {
   analysis?: { contentHash: string; updatedAt: Date } | null;
-  contentHash: string;
   now?: Date;
 }): LegitimacyAnalysisRefreshState {
   if (!analysis) return { canRefresh: true };
-
-  if (analysis.contentHash === contentHash) {
-    return {
-      canRefresh: false,
-      message: "Edit and save the document body before refreshing this analysis.",
-    };
-  }
 
   const availableAt = analysis.updatedAt.getTime() + LEGITIMACY_ANALYSIS_COOLDOWN_MS;
   if (availableAt > now.getTime()) {

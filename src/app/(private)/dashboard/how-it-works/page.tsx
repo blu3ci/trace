@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 const steps = [
-  { icon: FileText, title: "Write", text: "Create a document or attach one to an assignment. Trace records saved drafts, not every keystroke." },
+  { icon: FileText, title: "Write", text: "Create a document or attach one to an assignment. trace records saved drafts, not every keystroke." },
   { icon: History, title: "Develop", text: "As your ideas take shape, meaningful revisions and large pasted additions become part of the document’s history." },
   { icon: ReceiptText, title: "Reflect", text: "Open the receipt to revisit the final draft, active writing time, and a concise timeline of what changed." },
 ];
@@ -15,11 +15,11 @@ export default function HowTraceWorksPage() {
     <div className="container mx-auto max-w-6xl px-5 pb-12 sm:px-8">
       <header className="max-w-2xl py-8 sm:py-10">
         <p className="text-sm font-semibold tracking-[0.12em] text-[#567160] uppercase">Getting started</p>
-        <h1 className="mt-3 text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">How Trace works</h1>
-        <p className="mt-3 text-lg leading-7 text-[#65716a]">Trace makes the development of a draft easier to revisit. It is a record of writing, not a judgment about a writer.</p>
+        <h1 className="mt-3 text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">How trace works</h1>
+        <p className="mt-3 text-lg leading-7 text-[#65716a]">trace makes the development of a draft easier to revisit. It is a record of writing, not a judgment about a writer.</p>
       </header>
 
-      <section aria-label="The Trace writing process" className="grid gap-4 md:grid-cols-3">
+      <section aria-label="The trace writing process" className="grid gap-4 md:grid-cols-3">
         {steps.map(({ icon: Icon, title, text }, index) => (
           <Card key={title} className="h-full border-[#dbe3dc] bg-white">
             <CardHeader>
