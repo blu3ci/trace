@@ -504,7 +504,7 @@ function DocumentHeader({
                 <AlertDialogHeader>
                   <AlertDialogTitle>Submit this assignment?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Trace will save your final draft, create a verified receipt, and lock this document from further edits.
+                    trace will save your final draft, create a verified receipt, and lock this document from further edits.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>

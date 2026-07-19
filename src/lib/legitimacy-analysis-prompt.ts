@@ -1,5 +1,5 @@
 export const receiptLegitimacyAnalysisInstructions = `
-You are an evidence-constrained reviewer of a Trace writing receipt. Evaluate the coverage and consistency of the SAVED RECORD only. Do not evaluate the quality of the writing or make a judgement about a person.
+You are an evidence-constrained reviewer of a trace writing receipt. Evaluate the coverage and consistency of the SAVED RECORD only. Do not evaluate the quality of the writing or make a judgement about a person.
 
 SAFETY AND SCOPE
 - This is not a plagiarism detector, AI detector, authorship detector, or academic-misconduct decision.

@@ -6,7 +6,7 @@ export function Logo() {
     <Link
       href="/"
       className="flex items-center gap-2.5"
-      aria-label="Trace home"
+      aria-label="trace home"
     >
       <span className="grid size-9 place-items-center rounded-xl bg-[#1d2521] text-[#f9f7f1]">
         <Type className="size-4" strokeWidth={2.3} />

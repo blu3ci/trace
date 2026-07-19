@@ -28,28 +28,28 @@ import { Reveal } from "@/components/Reveal";
 const phases = [
   {
     time: "00—25 min",
-    title: "Find the argument",
-    text: "A broad opening becomes three possible claims. The student settles on a question worth pursuing.",
+    title: "Start the draft",
+    text: "An opening takes shape and establishes the first saved milestone for the assignment.",
     color: "bg-[#e7dbc0]",
   },
   {
     time: "25—60 min",
-    title: "Follow the evidence",
-    text: "A weaker point is removed as primary-source evidence reshapes the second section.",
+    title: "Develop the evidence",
+    text: "New material expands the second section while trace records the visible revision.",
     color: "bg-[#cddfd4]",
   },
   {
     time: "60—80 min",
-    title: "Refine the thesis",
-    text: "The introduction returns with a more specific, evidence-led position.",
+    title: "Rework the draft",
+    text: "A focused rewrite replaces an earlier sentence and leaves readable before-and-after evidence.",
     color: "bg-[#d9d4e7]",
   },
 ];
 
 const principles = [
-  "A focused writing space that keeps drafts and assignments together",
-  "Captures meaningful drafts, never keystrokes outside the document",
-  "Makes rapid bulk pastes visible without making accusations",
+  "Create assignments, share an access code, and review submitted work in one workspace",
+  "See active writing time, milestones, and sentence-level changes beside the final draft",
+  "Export a clear receipt without treating activity data as an authorship verdict",
 ];
 
 export default async function Home() {
@@ -69,6 +69,9 @@ export default async function Home() {
             </Button>
             <Button variant={"link"} nativeButton={false} render={<a href="#for-educators" />}>
               For educators
+            </Button>
+            <Button variant={"link"} nativeButton={false} render={<Link href="/demo" />}>
+              Demo
             </Button>
           </div>
           {userId == null ? (
@@ -95,19 +98,19 @@ export default async function Home() {
                 variant="outline"
                 className="border-[#c8d4cb] bg-[#f4f7f2] px-2.5 text-[#42614e]"
               >
-                <Sparkles data-icon="inline-start" /> The academic memory layer
+                <Sparkles data-icon="inline-start" /> Writing-process receipts for schools
               </Badge>
             </Reveal>
             <Reveal triggerOnMount delay={150} animationClassName="slide-in-from-bottom-4">
               <h1 className="mt-6 text-5xl leading-[0.98] font-semibold tracking-[-0.065em] text-[#1d2521] sm:text-6xl lg:text-7xl">
-                The work behind the work deserves to be seen.
+                Make the writing process visible.
               </h1>
             </Reveal>
             <Reveal triggerOnMount delay={300} animationClassName="slide-in-from-bottom-4">
               <p className="mt-6 max-w-xl text-lg leading-8 text-[#607067] sm:text-xl">
-                Trace turns a student&apos;s writing process into a clear, human
-                proof of learning—without turning the classroom into a
-                surveillance system.
+                trace gives students a calm place to write and gives instructors
+                a clear receipt of saved revision milestones, active writing time,
+                and what changed along the way.
               </p>
             </Reveal>
             <Reveal triggerOnMount delay={500} animationClassName="slide-in-from-bottom-4">
@@ -118,10 +121,10 @@ export default async function Home() {
                   nativeButton={false}
                   render={<Link href="/dashboard" />}
                 >
-                  Start a writing session <ArrowRight data-icon="inline-end" />
+                  Start writing <ArrowRight data-icon="inline-end" />
                 </Button>
                 <Button size="lg" variant="outline" className="h-11 rounded-xl px-5 text-sm" nativeButton={false} render={<Link href="/demo" />}>
-                  View demo
+                  Explore demo
                 </Button>
                 <a
                   href="#how-it-works"
@@ -133,8 +136,8 @@ export default async function Home() {
             </Reveal>
             <Reveal triggerOnMount delay={700} animationClassName="slide-in-from-bottom-2">
               <p className="mt-5 flex items-center gap-2 text-sm text-[#7a867e]">
-                <LockKeyhole className="size-3.5" /> Built for thinking, not
-                policing.
+                <LockKeyhole className="size-3.5" /> Saved milestones, not a
+                keystroke log.
               </p>
             </Reveal>
           </div>
@@ -152,40 +155,41 @@ export default async function Home() {
         <div className="mx-auto max-w-7xl px-5 py-20 sm:px-8 lg:px-10 lg:py-28">
           <Reveal className="max-w-2xl">
             <p className="text-sm font-semibold tracking-[0.12em] text-[#567160] uppercase">
-              A different kind of integrity
+              From draft to receipt
             </p>
             <h2 className="mt-4 text-3xl font-semibold tracking-[-0.05em] sm:text-5xl">
-              Don&apos;t inspect the answer. Understand the journey.
+              Capture the work that changed the draft.
             </h2>
             <p className="mt-5 text-lg leading-8 text-[#65716a]">
-              Trace quietly records meaningful moments of revision, then uses
-              them to reveal how an idea came into focus.
+              Students write or start an assignment in trace. Each saved revision
+              becomes a milestone, and submitted work carries a readable record
+              for instructors to review.
             </p>
           </Reveal>
 
           <div className="mt-12 grid gap-5 md:grid-cols-3">
-            <Reveal delay={100}>
+            <Reveal delay={100} className="h-full">
               <FeatureCard
                 icon={FileText}
                 number="01"
-                title="Start with a focused draft"
-                text="Write in Trace, where your documents, assignments, and writing progress stay in one place."
+                title="Write or start an assignment"
+                text="Students create a document or begin an instructor&apos;s assignment in the same focused editor."
               />
             </Reveal>
-            <Reveal delay={220}>
+            <Reveal delay={220} className="h-full">
               <FeatureCard
                 icon={Layers3}
                 number="02"
-                title="Let the process unfold"
-                text="Thoughtful snapshots capture additions, deletions, and time invested as the draft evolves."
+                title="Save meaningful milestones"
+                text="trace records saved drafts, active writing time, and sentence-level additions or removals as the work evolves."
               />
             </Reveal>
-            <Reveal delay={340}>
+            <Reveal delay={340} className="h-full">
               <FeatureCard
                 icon={Stamp}
                 number="03"
-                title="Share proof, not suspicion"
-                text="Export a receipt that gives teachers a readable view of genuine intellectual effort."
+                title="Review and export the receipt"
+                text="Instructors review the final draft beside its revision history, then download a receipt with the same evidence."
               />
             </Reveal>
           </div>
@@ -202,11 +206,11 @@ export default async function Home() {
               For educators
             </Badge>
             <h2 className="mt-5 text-3xl font-semibold tracking-[-0.05em] sm:text-5xl">
-              A receipt for real intellectual effort.
+              Review a record, not a score.
             </h2>
             <p className="mt-5 max-w-xl text-lg leading-8 text-[#65716a]">
-              In the Trace workspace, a teacher sees a student&apos;s final work
-              alongside the meaningful moments that shaped it.
+              Instructors create assignments, share a join code, and review each
+              submitted document alongside its saved writing record.
             </p>
             <ul className="mt-8 space-y-4">
               {principles.map((principle) => (
@@ -230,14 +234,14 @@ export default async function Home() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="text-base text-white">
-                    Proof of work
+                    Submitted receipt
                   </CardTitle>
                   <CardDescription className="mt-1 text-[#adbbb1]">
-                    History essay · saved milestones
+                    Argument essay · instructor view
                   </CardDescription>
                 </div>
                 <Badge className="bg-[#b9d9c1] text-[#173c27]">
-                  Documented process
+                  6 milestones
                 </Badge>
               </div>
             </CardHeader>
@@ -246,32 +250,32 @@ export default async function Home() {
                 <div className="rounded-xl bg-white/7 p-4">
                   <Clock3 className="size-4 text-[#b9d9c1]" />
                   <p className="mt-5 text-2xl font-semibold tracking-tight">
-                    1h 20m
+                    42m
                   </p>
                   <p className="mt-1 text-xs text-[#adbbb1]">
-                    tracked writing time
+                    active writing time
                   </p>
                 </div>
                 <div className="rounded-xl bg-white/7 p-4">
                   <Quote className="size-4 text-[#d7cef0]" />
-                  <p className="mt-5 text-2xl font-semibold tracking-tight">18</p>
+                  <p className="mt-5 text-2xl font-semibold tracking-tight">3</p>
                   <p className="mt-1 text-xs text-[#adbbb1]">
-                    meaningful revisions
+                    sentence-level rewrites
                   </p>
                 </div>
               </div>
               <div className="rounded-xl border border-white/10 bg-white/5 p-4">
                 <p className="text-xs font-medium tracking-[0.1em] text-[#b9d9c1] uppercase">
-                  Trace insight
+                  What changed
                 </p>
                 <p className="mt-2 text-sm leading-6 text-[#edf2ee]">
-                  Saved milestones give an instructor context for reviewing
-                  the draft&apos;s revisions, writing time, and research signals.
+                  A claim was rewritten with supporting evidence. The receipt
+                  preserves the removed sentence and the added material.
                 </p>
               </div>
               <div className="flex items-center gap-2 text-xs text-[#adbbb1]">
                 <span className="size-1.5 rounded-full bg-[#91c49e]" /> Ready to
-                share with an educator
+                export or review
               </div>
             </CardContent>
           </Card>
@@ -283,27 +287,27 @@ export default async function Home() {
           <div className="flex flex-col items-start justify-between gap-8 py-16 md:flex-row md:items-center">
             <div>
               <p className="text-3xl font-semibold tracking-[-0.05em] sm:text-4xl">
-                Make learning visible.
+                See trace in action.
               </p>
               <p className="mt-2 text-[#547061]">
-                Start tracing the story behind every draft.
+                Follow a sample assignment from first draft to instructor receipt.
               </p>
             </div>
             <Button
               size="lg"
               className="h-11 rounded-xl bg-[#1d2521] px-5 hover:bg-[#33423a]"
               nativeButton={false}
-              render={<Link href="/dashboard" />}
+              render={<Link href="/demo" />}
             >
-              Get started <ArrowRight data-icon="inline-end" />
+              Open the demo <ArrowRight data-icon="inline-end" />
             </Button>
           </div>
         </Reveal>
       </section>
 
       <footer className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-7 text-sm text-[#77827b] sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-10">
-        <span>© 2026 Trace · Academic integrity, reimagined.</span>
-        <span>Built for the messy, meaningful work of thinking.</span>
+        <span>© 2026 trace · Writing-process receipts for schools.</span>
+        <span>Built for the messy, meaningful work of revision.</span>
       </footer>
     </main>
   );
@@ -321,7 +325,7 @@ function FeatureCard({
   text: string;
 }) {
   return (
-    <Card className="border-0 bg-[#fbfaf7] shadow-sm shadow-[#1d2521]/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-[#315943]/10 motion-reduce:transition-none">
+    <Card className="h-full border-0 bg-[#fbfaf7] shadow-sm shadow-[#1d2521]/5 transition-all duration-300 hover:-translate-y-1 hover:shadow-lg hover:shadow-[#315943]/10 motion-reduce:transition-none">
       <CardHeader>
         <div className="flex items-center justify-between">
           <span className="grid size-10 place-items-center rounded-xl bg-[#e7eee7] text-[#315943]">
@@ -356,7 +360,7 @@ function LearningTimeline() {
       </CardHeader>
       <CardContent className="px-5 py-5 sm:px-6 sm:py-6">
         <p className="text-sm leading-6 text-[#68756d]">
-          A short, readable story of how this draft came to life.
+          A short, readable record of how this draft changed over time.
         </p>
         <div className="mt-6 space-y-1">
           {phases.map((phase, index) => (
@@ -392,9 +396,9 @@ function LearningTimeline() {
         </div>
         <div className="flex items-center justify-between border-t border-[#e8e9e4] pt-4">
           <span className="text-xs font-medium text-[#587360]">
-            Generated from 18 revisions
+            6 saved milestones
           </span>
-          <span className="text-xs text-[#8b958e]">View receipt →</span>
+          <span className="text-xs text-[#8b958e]">Open receipt →</span>
         </div>
       </CardContent>
     </Card>

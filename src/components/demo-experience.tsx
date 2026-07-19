@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2, Clock3, FileCheck2, FileText, History, UsersRound } from "lucide-react";
+import { BrainCircuit, CheckCircle2, Clock3, Download, FileCheck2, FileText, History, Minus, Plus, UsersRound } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,10 +11,18 @@ const stages = ["Assignment", "Student draft", "Instructor receipt"] as const;
 type Stage = (typeof stages)[number];
 
 const milestones = [
-  { time: "09:08 AM · 18 min active writing", title: "Find the argument", text: "A broad opening becomes a focused claim about how city planning affects access to green space." },
-  { time: "09:34 AM · 21 min active writing", title: "Follow the evidence", text: "A weaker example is removed as a city survey and neighborhood data reshape the second section." },
-  { time: "10:02 AM · 16 min active writing", title: "Refine the thesis", text: "The introduction returns with a more specific, evidence-led position before the draft is submitted." },
+  { time: "09:08 AM · 18 min active writing", title: "Set the first direction", text: "The opening establishes a claim about how city planning affects access to green space." },
+  { time: "09:34 AM · 21 min active writing", title: "Develop the draft", text: "New material brings neighborhood survey evidence into the second section." },
+  { time: "10:02 AM · 16 min active writing", title: "Rework the draft", text: "A broad claim is replaced with a more specific position before submission." },
 ];
+
+const revisionEvidence = {
+  removed: "Parks make cities better for everyone.",
+  added: [
+    "Parks are public infrastructure because they shape whether residents can move, gather, and recover close to home.",
+    "City survey data shows that access is uneven across neighborhoods.",
+  ],
+};
 
 export function DemoExperience() {
   const [stage, setStage] = useState<Stage>("Assignment");
@@ -49,7 +57,24 @@ function StudentStage() {
 }
 
 function ReceiptStage() {
-  return <div><div className="grid gap-3 sm:grid-cols-3"><Metric icon={Clock3} label="Active writing time" value="55 min" /><Metric icon={History} label="Revision milestones" value="3" /><Metric icon={FileCheck2} label="Final word count" value="684" /></div><div className="mt-5 grid gap-5 lg:grid-cols-[0.75fr_1.25fr]"><Card className="border-[#dbe3dc] bg-white"><CardHeader><CardTitle>What changed</CardTitle><CardDescription>A readable timeline, not a score.</CardDescription></CardHeader><CardContent><ol className="space-y-4 border-l border-[#ced9d0] pl-4">{milestones.map((milestone) => <li key={milestone.title} className="relative text-sm"><span className="absolute -left-[1.28rem] top-1.5 size-2 rounded-full bg-[#78a782]" /><p className="font-medium">{milestone.title}</p><p className="mt-1 leading-5 text-[#607067]">{milestone.text}</p></li>)}</ol></CardContent></Card><Card className="border-[#dbe3dc] bg-white"><CardHeader><CardTitle>Submission receipt</CardTitle><CardDescription>Final document preserved at submission.</CardDescription></CardHeader><CardContent><p className="text-sm leading-7 text-[#607067]">Parks are public infrastructure because they shape whether residents can move, gather, and recover close to home. This receipt pairs the final essay with the meaningful moments that developed it.</p><div className="mt-5 rounded-lg bg-[#f7faf7] p-4 text-sm text-[#405049]"><strong>Instructor takeaway:</strong> The draft develops from a broad opening into a specific, evidence-led argument. The receipt provides context for review without making an automated judgment.</div></CardContent></Card></div></div>;
+  return <div>
+    <div className="flex flex-wrap items-center justify-between gap-3">
+      <p className="text-sm text-[#607067]">Instructor view · the final draft is preserved alongside the saved writing record.</p>
+      <Button size="sm" variant="outline" disabled><Download /> Download receipt PDF</Button>
+    </div>
+    <div className="mt-4 grid gap-3 sm:grid-cols-3"><Metric icon={Clock3} label="Active writing time" value="55 min" /><Metric icon={History} label="Revision milestones" value="3" /><Metric icon={FileCheck2} label="Final word count" value="684" /></div>
+    <div className="mt-5 grid gap-5 lg:grid-cols-[0.75fr_1.25fr]">
+      <Card className="border-[#dbe3dc] bg-white"><CardHeader><CardTitle>Writing journey</CardTitle><CardDescription>A readable timeline of saved milestones.</CardDescription></CardHeader><CardContent><ol className="space-y-4 border-l border-[#ced9d0] pl-4">{milestones.map((milestone) => <li key={milestone.title} className="relative text-sm"><span className="absolute -left-[1.28rem] top-1.5 size-2 rounded-full bg-[#78a782]" /><p className="font-medium">{milestone.title}</p><p className="mt-1 leading-5 text-[#607067]">{milestone.text}</p></li>)}</ol></CardContent></Card>
+      <div className="space-y-5">
+        <Card className="border-[#dbe3dc] bg-white"><CardHeader><CardTitle>What changed</CardTitle><CardDescription>Sentence-level evidence from the latest saved revision.</CardDescription></CardHeader><CardContent><div className="grid gap-3 sm:grid-cols-2"><ChangeList icon={Minus} title="Removed" entries={[revisionEvidence.removed]} tone="border-red-200 bg-red-50 text-red-950" /><ChangeList icon={Plus} title="Added" entries={revisionEvidence.added} tone="border-emerald-200 bg-emerald-50 text-emerald-950" /></div></CardContent></Card>
+        <Card className="border-[#dbe3dc] bg-[#f7faf7]"><CardHeader className="pb-3"><CardTitle className="flex items-center gap-2 text-base"><BrainCircuit className="size-4 text-[#315943]" /> AI writing-process summary</CardTitle><CardDescription>Instructor-only context about the saved record.</CardDescription></CardHeader><CardContent><div className="flex flex-wrap items-center justify-between gap-3"><p className="text-sm leading-6 text-[#405049]">Three saved milestones and 55 minutes of active writing provide a clear record of the submitted draft&apos;s development.</p><div className="w-36 rounded-md border border-[#dbe7de] bg-white px-3 py-2"><div className="flex items-center justify-between"><p className="text-[11px] font-semibold tracking-[0.08em] text-[#567160] uppercase">Coverage</p><p className="text-xs font-medium text-[#3d5143]">Strong</p></div><div className="mt-1.5 flex gap-1"><span className="h-1.5 flex-1 rounded-full bg-[#4f8a5a]" /><span className="h-1.5 flex-1 rounded-full bg-[#4f8a5a]" /><span className="h-1.5 flex-1 rounded-full bg-[#4f8a5a]" /></div></div></div></CardContent></Card>
+      </div>
+    </div>
+  </div>;
+}
+
+function ChangeList({ icon: Icon, title, entries, tone }: { icon: typeof Plus; title: string; entries: string[]; tone: string }) {
+  return <section className={`rounded-lg border p-3 ${tone}`}><p className="flex items-center gap-1.5 text-sm font-medium"><Icon className="size-4" /> {title}</p><ul className="mt-2 space-y-2 text-sm leading-5">{entries.map((entry) => <li key={entry} className="rounded bg-white/65 p-2">{entry}</li>)}</ul></section>;
 }
 
 function Metric({ icon: Icon, label, value }: { icon: typeof Clock3; label: string; value: string }) {

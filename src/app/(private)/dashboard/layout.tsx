@@ -33,7 +33,7 @@ export default async function DashboardLayout({
             {role === "instructor" && <Button variant={"link"} nativeButton={false} render={<Link href={"/dashboard/assignments/instructor"} />}>Instructor Assignments</Button>}
           </div>
 
-          <div className="flex items-center gap-1"><Button className="hidden md:inline-flex" variant="link" nativeButton={false} render={<Link href="/dashboard/how-it-works" />}>How Trace works</Button><UserButton /></div>
+          <div className="flex items-center gap-1"><Button className="hidden md:inline-flex" variant="link" nativeButton={false} render={<Link href="/dashboard/how-it-works" />}>How trace works</Button><UserButton /></div>
         </nav>
         <nav className="container mx-auto flex gap-1 overflow-x-auto px-5 pb-3 sm:px-8 md:hidden" aria-label="Workspace navigation">
           {role !== "instructor" && <Button size="sm" variant="outline" nativeButton={false} render={<Link href="/dashboard" />}><FileText /> Documents</Button>}

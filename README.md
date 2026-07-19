@@ -1,6 +1,6 @@
-# Trace
+# trace
 
-Trace is a Next.js application built with React, Tailwind CSS, Clerk authentication, and Drizzle ORM.
+trace is a Next.js application built with React, Tailwind CSS, Clerk authentication, and Drizzle ORM.
 
 ## Prerequisites
 
@@ -63,9 +63,9 @@ pnpm start
 
 ### Product goal
 
-Trace should help an instructor review how an assignment document was produced. It should summarize editing patterns, paste activity, and citation-like material, then produce an **evidence-backed, uncertain assessment** after submission. It must not claim to prove authorship or make an automatic grading or disciplinary decision.
+trace should help an instructor review how an assignment document was produced. It should summarize editing patterns, paste activity, and citation-like material, then produce an **evidence-backed, uncertain assessment** after submission. It must not claim to prove authorship or make an automatic grading or disciplinary decision.
 
-The design should collect only signals generated inside the Trace editor. Do not record browser-wide keystrokes, clipboard contents outside an explicit paste, passwords, unrelated tabs, or hidden background activity.
+The design should collect only signals generated inside the trace editor. Do not record browser-wide keystrokes, clipboard contents outside an explicit paste, passwords, unrelated tabs, or hidden background activity.
 
 ### Guardrails and product decisions
 

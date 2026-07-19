@@ -79,14 +79,14 @@ export default async function DashboardPage() {
 function GettingStarted() {
   return (
     <Card className="border-[#dbe3dc] bg-white sm:col-span-2">
-      <CardHeader><CardTitle>Start your first writing session</CardTitle><CardDescription>Trace keeps your draft, meaningful revisions, and receipt in one place.</CardDescription></CardHeader>
+      <CardHeader><CardTitle>Start your first writing session</CardTitle><CardDescription>trace keeps your draft, meaningful revisions, and receipt in one place.</CardDescription></CardHeader>
       <CardContent>
         <ol className="space-y-2 text-sm leading-6 text-[#607067]">
           <li><span className="mr-2 font-semibold text-[#315943]">1.</span>Create a document and begin writing.</li>
           <li><span className="mr-2 font-semibold text-[#315943]">2.</span>Save as you develop your ideas.</li>
           <li><span className="mr-2 font-semibold text-[#315943]">3.</span>Open the receipt to revisit the writing journey.</li>
         </ol>
-        <Button className="mt-5" variant="outline" nativeButton={false} render={<Link href="/dashboard/how-it-works" />}>How Trace works <ArrowRight data-icon="inline-end" /></Button>
+        <Button className="mt-5" variant="outline" nativeButton={false} render={<Link href="/dashboard/how-it-works" />}>How trace works <ArrowRight data-icon="inline-end" /></Button>
       </CardContent>
     </Card>
   );
