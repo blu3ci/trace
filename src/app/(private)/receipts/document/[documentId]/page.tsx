@@ -14,6 +14,7 @@ import {
   getLegitimacyAnalysisRefreshState,
 } from "@/lib/legitimacy-analysis";
 import { hashDocumentBody } from "@/lib/legitimacy-analysis.server";
+import { hasUserRole } from "@/lib/user-role";
 
 export const revalidate = 0;
 
@@ -27,6 +28,7 @@ export default async function DocumentReceiptPage({ params }: { params: Promise<
     with: { legitimacyAnalysis: true },
   });
   if (!document) notFound();
+  const isInstructor = await hasUserRole(userId, "instructor");
 
   const milestones = await db.query.documentMilestonesTable.findMany({
     where: { documentId },
@@ -54,7 +56,7 @@ export default async function DocumentReceiptPage({ params }: { params: Promise<
           <ReceiptStat icon={PencilLine} label="Current word count" value={countWords(document.content).toLocaleString()} />
         </div>
 
-        <div className="mt-8">
+        {isInstructor && <div className="mt-8">
           <LegitimacyAnalysisCard
             documentId={document.id}
             initialAnalysis={document.legitimacyAnalysis
@@ -65,7 +67,7 @@ export default async function DocumentReceiptPage({ params }: { params: Promise<
               contentHash: hashDocumentBody(document.content),
             })}
           />
-        </div>
+        </div>}
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[0.72fr_1.28fr]">
           <Card className="h-fit border-[#dbe3dc] bg-[#f9fbf9]">

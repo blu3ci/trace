@@ -16,6 +16,8 @@ import {
   getLegitimacyAnalysisRefreshState,
 } from "@/lib/legitimacy-analysis";
 import { hashDocumentBody } from "@/lib/legitimacy-analysis.server";
+import { findRevisionChanges } from "@/lib/revision-diff";
+import { hasUserRole } from "@/lib/user-role";
 
 export const revalidate = 0;
 
@@ -32,6 +34,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
 
   const isInstructor = submission.assignment.clerkUserId === userId;
   if (!canViewReceipt({ viewerId: userId, studentId: submission.clerkUserId, assignmentOwnerId: submission.assignment.clerkUserId })) notFound();
+  const canViewAiSummary = isInstructor && await hasUserRole(userId, "instructor");
 
   const milestones = await db.query.documentMilestonesTable.findMany({
     where: { documentId: submission.documentId },
@@ -39,10 +42,16 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
     columns: { activeSeconds: true, blockCount: true, bulkPasteWordCount: true, content: true, createdAt: true, wordCount: true },
   });
   const receipt = submission.receipt;
-  const milestoneSummaries = milestones.map((milestone, index) => ({
-    ...milestone,
-    summary: summarizeMilestone(milestone, milestones[index - 1]),
-  }));
+  const milestoneSummaries = milestones.map((milestone, index) => {
+    const previous = milestones[index - 1];
+    return {
+      ...milestone,
+      changes: previous?.content && milestone.content
+        ? findRevisionChanges(previous.content as Block[], milestone.content as Block[])
+        : undefined,
+      summary: summarizeMilestone(milestone, previous),
+    };
+  });
   const bulkPasteWordCount = milestones.reduce(
     (total, milestone) => total + milestone.bulkPasteWordCount,
     0,
@@ -80,10 +89,12 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
           </div>
           <ReceiptPdfDownloadButton
             activeWritingTime={formatDuration(receipt.activeSeconds)}
+            analysis={canViewAiSummary ? submission.document.legitimacyAnalysis?.analysis : undefined}
             assignmentTitle={submission.assignment.title}
             bulkPasteWordCount={bulkPasteWordCount}
             finalWordCount={receipt.finalWordCount}
-            milestones={milestoneSummaries.map(({ createdAt, activeSeconds, summary }) => ({
+            milestones={milestoneSummaries.map(({ createdAt, activeSeconds, changes, summary }) => ({
+              changes,
               dateTime: formatDateTime(createdAt),
               duration: formatDuration(activeSeconds),
               text: summary.text,
@@ -109,7 +120,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
           <ReceiptStat icon={FileCheck2} label="Large pasted additions" value={bulkPasteWordCount ? `${bulkPasteWordCount.toLocaleString()} words` : "None"} />
         </div>
 
-        <div className="mt-8">
+        {canViewAiSummary && <div className="mt-8">
           <LegitimacyAnalysisCard
             documentId={submission.documentId}
             initialAnalysis={submission.document.legitimacyAnalysis
@@ -120,7 +131,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
               contentHash: hashDocumentBody(submission.document.content),
             })}
           />
-        </div>
+        </div>}
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[0.72fr_1.28fr]">
           <Card className="h-fit border-[#dbe3dc] bg-[#f9fbf9]">

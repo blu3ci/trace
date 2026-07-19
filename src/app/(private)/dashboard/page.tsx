@@ -13,6 +13,8 @@ import { auth } from "@clerk/nextjs/server";
 import { Block } from "@blocknote/core";
 import { ArrowRight, CalendarDays, CheckCircle2, ClipboardList, FilePlusCorner, FileText, Settings2 } from "lucide-react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getUserRole } from "@/lib/user-role";
 
 export const revalidate = 0;
 
@@ -20,6 +22,7 @@ export default async function DashboardPage() {
   const { userId, redirectToSignIn } = await auth();
 
   if (userId == null) return redirectToSignIn();
+  if ((await getUserRole(userId)) === "instructor") redirect("/dashboard/assignments/instructor");
 
   const [documents, submissions] = await Promise.all([
     db.query.documentsTable.findMany({

@@ -233,11 +233,11 @@ export default async function Home() {
                     Proof of work
                   </CardTitle>
                   <CardDescription className="mt-1 text-[#adbbb1]">
-                    History essay · verified session
+                    History essay · saved milestones
                   </CardDescription>
                 </div>
                 <Badge className="bg-[#b9d9c1] text-[#173c27]">
-                  Authentic process
+                  Documented process
                 </Badge>
               </div>
             </CardHeader>
@@ -265,8 +265,8 @@ export default async function Home() {
                   Trace insight
                 </p>
                 <p className="mt-2 text-sm leading-6 text-[#edf2ee]">
-                  The thesis became more nuanced after the student introduced
-                  primary evidence and reconsidered a counterargument.
+                  Saved milestones give an instructor context for reviewing
+                  the draft&apos;s revisions, writing time, and research signals.
                 </p>
               </div>
               <div className="flex items-center gap-2 text-xs text-[#adbbb1]">

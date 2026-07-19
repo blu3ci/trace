@@ -32,8 +32,7 @@ export default async function InstructorAssignmentsPage() {
       <div className="shrink-0 flex flex-col gap-3 py-8 sm:py-10">
         <p className="text-sm font-semibold tracking-[0.12em] text-[#567160] uppercase">Teaching space</p>
         <h1 className="text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">Instructor Assignments</h1>
-        <p className="max-w-xl text-[#65716a]">Create assignments, share their codes, and see the students enrolled in each one.</p>
-        <div><Button variant="link" className="h-auto px-0" nativeButton={false} render={<Link href="/dashboard/assignments" />}>Back to my assignments</Button></div>
+        <p className="max-w-2xl text-[#65716a]">Create assignments, share their codes, and see the students enrolled in each one.</p>
       </div>
 
       <div className="grid gap-6 pb-6 lg:min-h-0 lg:flex-1 lg:grid-cols-[0.76fr_1.24fr] lg:grid-rows-1">

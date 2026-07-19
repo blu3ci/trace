@@ -12,7 +12,6 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { db } from "@/db";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   createAssignmentSubmission,
   submitAssignmentSubmissionFromForm,
@@ -50,7 +49,7 @@ export default async function AssignmentsPage() {
   const upcomingCount = activeAssignments.filter((assignment) => assignment.dueDate && assignment.dueDate >= today).length;
 
   return (
-    <div className="container mx-auto flex max-w-6xl flex-col px-5 sm:px-8 lg:h-[calc(100dvh-5rem)] lg:overflow-hidden">
+    <div className="container mx-auto flex max-w-6xl flex-col px-5 sm:px-8">
       <div className="shrink-0 flex flex-col gap-2 py-8 sm:py-10">
         <p className="text-sm font-semibold tracking-[0.12em] text-[#567160] uppercase">Learning space</p>
         <h1 className="text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">My Assignments</h1>
@@ -82,8 +81,7 @@ export default async function AssignmentsPage() {
             <span className="grid size-10 place-items-center rounded-full bg-[#e5f1e8] text-[#315943]"><ClipboardList className="size-5" /></span>
           </div>
 
-          <ScrollArea className="-mx-1 h-[min(55dvh,32rem)] lg:min-h-0 lg:h-auto lg:flex-1">
-            <div className="flex flex-col gap-4 p-1">
+          <div className="flex flex-col gap-4">
               {activeAssignments.length === 0 ? (
                 <Card className="border-dashed border-[#cfd8d0] bg-[#fbfcfa] py-14 text-center">
                   <CardContent className="flex flex-col items-center">
@@ -139,8 +137,7 @@ export default async function AssignmentsPage() {
                   </Card>
                 );
               })}
-            </div>
-          </ScrollArea>
+          </div>
         </section>
       </div>
     </div>

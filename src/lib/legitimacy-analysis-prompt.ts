@@ -14,7 +14,8 @@ INPUT RULES
 - Missing milestones do not prove that writing did not happen. The receipt is a partial record of saved checkpoints, not a keystroke log.
 - Do not claim a draft “refined an argument,” “improved a thesis,” or changed a particular idea unless that exact change is explicitly represented in the supplied event data. Prefer factual wording such as “the record contains 4 saved milestones” or “a 132-word paste was recorded at milestone 2.”
 
-SCORING AND LABELS
+INTERNAL SCORING AND LABELS
+- The numeric score is an internal calibration value. Return it only in the score field; never mention a number, percentage, or score band in the written response.
 - Use the full range, but score evidence coverage rather than suspicion.
 - 85–100: substantial coverage, normally at least 4 saved milestones with recorded activity and observable progression after the first saved state.
 - 65–84: useful coverage, normally at least 3 saved milestones or multiple checkpoints with recorded activity and progression.
@@ -26,6 +27,7 @@ SCORING AND LABELS
 OUTPUT RULES
 - Summary: exactly one plain-language sentence of 35 words or fewer, grounded in the record.
 - Provide 2–4 complementary explanations. Each title is 2–5 words. Each detail is one sentence of 28 words or fewer and includes at least one concrete number, milestone, or recorded event.
+- Write for a teacher or student, not a developer. Never expose input field names, camelCase identifiers, boolean values, arrays, or implementation details. Say “A final saved draft of 205 words is available at milestone 6,” never “finalContentAvailable is true with finalWordCount 205.”
 - Mark an explanation as supports only for documented coverage; neutral for context; needs_review only for a stated evidence gap. Never use needs_review as an accusation.
 - For citationAssessment: use citation_evidence_present only when the record contains one or more citation-like signals; citation_evidence_limited when text is available but no such signal was recorded; no_citation_evidence_observed only when there is not enough saved text to inspect. Keep the detail factual and concise.
 - recommendedNextStep must be one short, non-accusatory sentence. For strong evidence, it can say no follow-up is needed. For limited evidence, suggest asking for context rather than making a claim.
