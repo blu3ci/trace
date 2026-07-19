@@ -12,6 +12,7 @@ import { DueDate, formatDate } from "../../page";
 import { AssignmentCode } from "../assignment-code";
 import { AssignmentForm } from "../../assignment-form";
 import { ArchiveAssignmentButton } from "./archive-assignment-button";
+import { UnsubmitAssignmentButton } from "./unsubmit-assignment-button";
 import { hasUserRole } from "@/lib/user-role";
 
 export const revalidate = 0;
@@ -184,7 +185,7 @@ function SubmissionGroup({
 }: {
   title: string;
   description: string;
-  submissions: Array<{ id: string; clerkUserId: string; submittedAt: Date | null; receipt: { id: string } | null }>;
+  submissions: Array<{ assignmentId: string; id: string; clerkUserId: string; submittedAt: Date | null; receipt: { id: string } | null }>;
   profiles: Map<string, { name: string; email: string | undefined; imageUrl: string }>;
   status: "on-time" | "late";
 }) {
@@ -224,6 +225,7 @@ function SubmissionGroup({
                       ) : (
                         <span className="text-xs text-[#69756d]">Receipt unavailable</span>
                       )}
+                      <UnsubmitAssignmentButton assignmentId={submission.assignmentId} studentName={name} submissionId={submission.id} />
                     </div>
                   </li>
                 );

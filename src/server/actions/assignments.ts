@@ -6,13 +6,19 @@ import { auth } from "@clerk/nextjs/server";
 import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@/db";
-import { assignmentMembersTable, assignmentsTable } from "@/db/schema";
+import {
+  assignmentReceiptsTable,
+  assignmentMembersTable,
+  assignmentsTable,
+  assignmentSubmissionsTable,
+} from "@/db/schema";
 import { canJoinAssignment } from "@/lib/access-control";
 import { hasUserRole } from "@/lib/user-role";
 import {
   assignmentSubmissionSchema,
+  assignmentUnsubmissionSchema,
   joinAssignmentSchema,
   newAssignmentSchema,
   updateAssignmentSchema,
@@ -155,6 +161,65 @@ export async function archiveAssignment(unsafeAssignmentId: string): Promise<{ e
   }
 
   revalidateAssignmentPaths(unsafeAssignmentId);
+  return { error: false };
+}
+
+export async function unsubmitAssignmentSubmission(
+  unsafeAssignmentId: string,
+  unsafeSubmissionId: string,
+): Promise<{ error: boolean }> {
+  const { userId } = await auth();
+  if (!userId) return { error: true };
+  if (!(await hasUserRole(userId, "instructor"))) return { error: true };
+
+  let assignmentId: string;
+  let submissionId: string;
+  try {
+    ({ assignmentId, submissionId } = await assignmentUnsubmissionSchema.validate({
+      assignmentId: unsafeAssignmentId,
+      submissionId: unsafeSubmissionId,
+    }));
+  } catch {
+    return { error: true };
+  }
+
+  const [assignment] = await db
+    .select({ id: assignmentsTable.id })
+    .from(assignmentsTable)
+    .where(and(
+      eq(assignmentsTable.id, assignmentId),
+      eq(assignmentsTable.clerkUserId, userId),
+      isNull(assignmentsTable.archivedAt),
+    ))
+    .limit(1);
+  if (!assignment) return { error: true };
+
+  const [submission] = await db
+    .select({ documentId: assignmentSubmissionsTable.documentId, id: assignmentSubmissionsTable.id })
+    .from(assignmentSubmissionsTable)
+    .where(and(
+      eq(assignmentSubmissionsTable.id, submissionId),
+      eq(assignmentSubmissionsTable.assignmentId, assignmentId),
+      isNotNull(assignmentSubmissionsTable.submittedAt),
+    ))
+    .limit(1);
+  if (!submission) return { error: true };
+
+  const [updated] = await db.batch([
+    db
+      .update(assignmentSubmissionsTable)
+      .set({ submittedAt: null })
+      .where(and(
+        eq(assignmentSubmissionsTable.id, submission.id),
+        isNotNull(assignmentSubmissionsTable.submittedAt),
+      ))
+      .returning({ id: assignmentSubmissionsTable.id }),
+    db.delete(assignmentReceiptsTable).where(eq(assignmentReceiptsTable.submissionId, submission.id)),
+  ]);
+  if (updated.length === 0) return { error: true };
+
+  revalidateAssignmentPaths(assignmentId);
+  revalidatePath(`/document/${submission.documentId}`);
   return { error: false };
 }
 

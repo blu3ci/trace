@@ -63,3 +63,11 @@ export const attachDocumentToAssignmentSchema = assignmentSubmissionSchema
     }),
   )
   .required();
+
+export const assignmentUnsubmissionSchema = assignmentSubmissionSchema
+  .concat(
+    yup.object({
+      submissionId: yup.string().uuid().required(),
+    }),
+  )
+  .required();
