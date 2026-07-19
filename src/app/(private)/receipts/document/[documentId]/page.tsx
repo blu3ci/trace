@@ -13,7 +13,7 @@ import { LegitimacyAnalysisCard } from "@/components/receipt/legitimacy-analysis
 import {
   getLegitimacyAnalysisRefreshState,
 } from "@/lib/legitimacy-analysis";
-import { hashDocumentBody } from "@/lib/legitimacy-analysis.server";
+import { applyPasteCoverageGuardrail } from "@/lib/legitimacy-analysis-guardrails";
 import { hasUserRole } from "@/lib/user-role";
 
 export const revalidate = 0;
@@ -36,6 +36,14 @@ export default async function DocumentReceiptPage({ params }: { params: Promise<
     columns: { activeSeconds: true, bulkPasteWordCount: true, content: true, createdAt: true, wordCount: true },
   });
   const activeSeconds = milestones.reduce((total, milestone) => total + milestone.activeSeconds, 0);
+  const bulkPasteWordCount = milestones.reduce((total, milestone) => total + milestone.bulkPasteWordCount, 0);
+  const finalWordCount = countWords(document.content);
+  const displayedAnalysis = document.legitimacyAnalysis
+    ? applyPasteCoverageGuardrail(document.legitimacyAnalysis.analysis, {
+      finalWordCount,
+      totalBulkPasteWordCount: bulkPasteWordCount,
+    })
+    : undefined;
 
   return (
     <main className="min-h-screen bg-[#f7f8f7] pb-14 text-[#1d2521]">
@@ -53,19 +61,19 @@ export default async function DocumentReceiptPage({ params }: { params: Promise<
         <div className="mt-8 grid gap-4 sm:grid-cols-3">
           <ReceiptStat icon={Clock3} label="Active writing time" value={formatDuration(activeSeconds)} />
           <ReceiptStat icon={History} label="Revision milestones" value={String(milestones.length)} />
-          <ReceiptStat icon={PencilLine} label="Current word count" value={countWords(document.content).toLocaleString()} />
+          <ReceiptStat icon={PencilLine} label="Current word count" value={finalWordCount.toLocaleString()} />
         </div>
 
         {isInstructor && <div className="mt-8">
           <LegitimacyAnalysisCard
             documentId={document.id}
-            initialAnalysis={document.legitimacyAnalysis
-              ? { ...document.legitimacyAnalysis.analysis, generatedAt: document.legitimacyAnalysis.updatedAt.toISOString() }
+            initialAnalysis={displayedAnalysis
+              ? { ...displayedAnalysis, generatedAt: document.legitimacyAnalysis!.updatedAt.toISOString() }
               : undefined}
             initialRefreshState={getLegitimacyAnalysisRefreshState({
               analysis: document.legitimacyAnalysis,
-              contentHash: hashDocumentBody(document.content),
             })}
+            milestoneCount={milestones.length}
           />
         </div>}
 

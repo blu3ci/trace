@@ -19,7 +19,7 @@ type ReceiptMilestone = {
 
 type ReceiptPdfDownloadButtonProps = {
   activeWritingTime: string;
-  analysis?: Omit<LegitimacyAnalysis, "score">;
+  analysis?: LegitimacyAnalysis;
   assignmentTitle: string;
   bulkPasteWordCount: number;
   finalWordCount: number;
@@ -161,29 +161,25 @@ function drawSummaryPageHeading(document: PdfDocument) {
   return page.margin + 54;
 }
 
-function getAnalysisHeight(document: PdfDocument, analysis: Omit<LegitimacyAnalysis, "score">) {
-  let height = 82;
+function getAnalysisHeight(document: PdfDocument, analysis: LegitimacyAnalysis) {
+  let height = 64;
   height += textHeight(document, analysis.summary, contentWidth - 24, 11, 14) + 8;
   analysis.explanations.forEach((explanation) => {
-    height += 18 + textHeight(document, explanation.detail, contentWidth - 42, 9, 12);
+    height += 28 + textHeight(document, explanation.detail, contentWidth - 42, 9, 12);
   });
   height += 54 + textHeight(document, analysis.citationAssessment.detail, contentWidth - 42, 9, 12);
-  return height + 14 + textHeight(document, analysis.recommendedNextStep, contentWidth - 24, 9, 12);
+  return height + 14;
 }
 
-function drawAnalysis(document: PdfDocument, cursor: number, analysis: Omit<LegitimacyAnalysis, "score">) {
+function drawAnalysis(document: PdfDocument, cursor: number, analysis: LegitimacyAnalysis) {
   const height = getAnalysisHeight(document, analysis);
   drawBox(document, page.margin, cursor, contentWidth, height, colors.soft);
   let y = cursor + 22;
-  const coverage = { strong: "Strong documented record", mixed: "Partial documented record", needs_review: "Limited documented record" } as const;
 
   setTextStyle(document, 14, colors.ink, "bold");
   document.text("Writing-process summary", page.margin + 12, y);
   y += 18;
   y = drawWrappedText(document, analysis.summary, page.margin + 12, y, contentWidth - 24, 11, 14, colors.ink, "bold") + 7;
-  setTextStyle(document, 8, colors.muted);
-  document.text(`Record coverage: ${coverage[analysis.label]}. Confidence: ${analysis.confidence}.`, page.margin + 12, y);
-  y += 18;
 
   analysis.explanations.forEach((explanation) => {
     document.setDrawColor(...colors.green);
@@ -200,11 +196,7 @@ function drawAnalysis(document: PdfDocument, cursor: number, analysis: Omit<Legi
   y = drawWrappedText(document, analysis.citationAssessment.detail, page.margin + 21, y + 27, contentWidth - 42, 9, 12, colors.muted) + 8;
   setTextStyle(document, 7, colors.muted);
   document.text("Pattern matches in saved text, not verified citations or sources.", page.margin + 21, y);
-  y += 18;
-
-  setTextStyle(document, 9, colors.greenDark, "bold");
-  document.text("Suggested next step:", page.margin + 12, y);
-  return drawWrappedText(document, analysis.recommendedNextStep, page.margin + 12, y + 14, contentWidth - 24, 9, 12, colors.muted) + 12;
+  return y + 18;
 }
 
 function drawJourneyHeading(document: PdfDocument, continued: boolean) {

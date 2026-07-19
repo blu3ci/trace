@@ -20,7 +20,7 @@ export default async function InstructorAssignmentsPage() {
 
   const assignments = await db.query.assignmentsTable.findMany({
     where: { clerkUserId: userId },
-    orderBy: ({ dueDate, createdAt }, { asc, desc }) => [asc(dueDate), desc(createdAt)],
+    orderBy: ({ createdAt }, { desc }) => desc(createdAt),
     with: { members: true },
   });
   const today = new Date().toISOString().slice(0, 10);

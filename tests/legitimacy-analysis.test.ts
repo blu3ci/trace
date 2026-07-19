@@ -10,42 +10,27 @@ const now = new Date("2026-07-17T12:00:00.000Z");
 describe("document legitimacy analysis refreshes", () => {
   it("allows the first analysis for a document", () => {
     expect(getLegitimacyAnalysisRefreshState({
-      contentHash: "first-draft",
       now,
     })).toEqual({ canRefresh: true });
   });
 
-  it("requires the document body to change before an existing score can refresh", () => {
-    const contentHash = "first-draft";
-
+  it("allows a refresh after the cooldown even when the document body is unchanged", () => {
     expect(getLegitimacyAnalysisRefreshState({
-      analysis: { contentHash, updatedAt: new Date(now.getTime() - LEGITIMACY_ANALYSIS_COOLDOWN_MS) },
-      contentHash,
+      analysis: { contentHash: "first-draft", updatedAt: new Date(now.getTime() - LEGITIMACY_ANALYSIS_COOLDOWN_MS) },
       now,
-    })).toEqual({
-      canRefresh: false,
-      message: "Edit and save the document body before refreshing this analysis.",
-    });
+    })).toEqual({ canRefresh: true });
   });
 
-  it("applies the ten-minute cooldown after the body changes", () => {
-    const previousHash = "first-draft";
-    const changedHash = "revised-draft";
-
+  it("applies the ten-minute cooldown after an analysis", () => {
     expect(getLegitimacyAnalysisRefreshState({
-      analysis: { contentHash: previousHash, updatedAt: now },
-      contentHash: changedHash,
+      analysis: { contentHash: "first-draft", updatedAt: now },
       now: new Date(now.getTime() + 2 * 60 * 1000),
     })).toEqual({ canRefresh: false, message: "Refresh available in 8m." });
   });
 
-  it("allows a changed document body once the cooldown expires", () => {
-    const previousHash = "first-draft";
-    const changedHash = "revised-draft";
-
+  it("allows another analysis once the cooldown expires", () => {
     expect(getLegitimacyAnalysisRefreshState({
-      analysis: { contentHash: previousHash, updatedAt: now },
-      contentHash: changedHash,
+      analysis: { contentHash: "first-draft", updatedAt: now },
       now: new Date(now.getTime() + LEGITIMACY_ANALYSIS_COOLDOWN_MS),
     })).toEqual({ canRefresh: true });
   });

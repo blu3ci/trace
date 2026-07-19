@@ -56,7 +56,7 @@ import {
 } from "@/components/ui/select";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { type ClipboardEvent, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 const SAVE_DELAY = 1500;
 const BULK_PASTE_WORD_THRESHOLD = 50;
@@ -116,6 +116,10 @@ export default function Editor({
 
           view.dispatch(view.state.tr.insertText("\t"));
           return true;
+        },
+        handlePaste: (_view, event) => {
+          recordBulkPaste(event);
+          return false;
         },
       },
     },
@@ -261,12 +265,12 @@ export default function Editor({
     }
   };
 
-  const recordBulkPaste = (event: ClipboardEvent<HTMLDivElement>) => {
-    const pastedWordCount = countTextWords(event.clipboardData.getData("text/plain"));
+  function recordBulkPaste(event: ClipboardEvent) {
+    const pastedWordCount = countTextWords(event.clipboardData?.getData("text/plain") ?? "");
     if (pastedWordCount >= BULK_PASTE_WORD_THRESHOLD) {
       pendingBulkPasteWordCount.current += pastedWordCount;
     }
-  };
+  }
 
   // Renders the editor instance using a React component.
   return (
@@ -288,8 +292,8 @@ export default function Editor({
         receiptHref={receiptHref}
       />
       {!isSubmitted && <DocumentToolbar editor={editor} />}
-      <div className="h-full overflow-y-auto py-2">
-        <div className="max-w-250 min-h-full p-8 shadow-sm mx-auto">
+      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto bg-[#f7f8f7] px-3 py-3 sm:px-6 sm:py-6">
+        <div className="mx-auto min-h-full w-full max-w-4xl bg-white p-4 shadow-sm sm:p-8">
           <BlockNoteView
             editor={editor}
             theme="light"
@@ -298,7 +302,6 @@ export default function Editor({
             onChange={() => {
               if (!isSubmitted) recordEditingActivity();
             }}
-            onPaste={recordBulkPaste}
             sideMenu={false}
             comments={false}
           />

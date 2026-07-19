@@ -26,14 +26,22 @@ export default async function AssignmentsPage() {
   if (!userId) return redirectToSignIn();
   if (!(await hasUserRole(userId, "student"))) redirect("/dashboard");
 
-  const memberships = await db.query.assignmentMembersTable.findMany({ where: { clerkUserId: userId } });
+  const memberships = await db.query.assignmentMembersTable.findMany({
+    where: { clerkUserId: userId },
+    columns: { assignmentId: true, createdAt: true },
+    orderBy: ({ createdAt }, { desc }) => desc(createdAt),
+  });
   const assignmentIds = memberships.map((membership) => membership.assignmentId);
-  const assignments = assignmentIds.length === 0
+  const fetchedAssignments = assignmentIds.length === 0
     ? []
     : await db.query.assignmentsTable.findMany({
       where: { id: { in: assignmentIds } },
-      orderBy: ({ dueDate, createdAt }, { asc, desc }) => [asc(dueDate), desc(createdAt)],
     });
+  const assignmentsById = new Map(fetchedAssignments.map((assignment) => [assignment.id, assignment]));
+  const assignments = assignmentIds.flatMap((assignmentId) => {
+    const assignment = assignmentsById.get(assignmentId);
+    return assignment ? [assignment] : [];
+  });
   const submissions = assignmentIds.length === 0
     ? []
     : await db.query.assignmentSubmissionsTable.findMany({

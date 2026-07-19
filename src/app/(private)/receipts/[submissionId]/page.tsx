@@ -15,7 +15,7 @@ import { LegitimacyAnalysisCard } from "@/components/receipt/legitimacy-analysis
 import {
   getLegitimacyAnalysisRefreshState,
 } from "@/lib/legitimacy-analysis";
-import { hashDocumentBody } from "@/lib/legitimacy-analysis.server";
+import { applyPasteCoverageGuardrail } from "@/lib/legitimacy-analysis-guardrails";
 import { findRevisionChanges } from "@/lib/revision-diff";
 import { hasUserRole } from "@/lib/user-role";
 
@@ -56,6 +56,12 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
     (total, milestone) => total + milestone.bulkPasteWordCount,
     0,
   );
+  const displayedAnalysis = submission.document.legitimacyAnalysis
+    ? applyPasteCoverageGuardrail(submission.document.legitimacyAnalysis.analysis, {
+      finalWordCount: receipt.finalWordCount,
+      totalBulkPasteWordCount: bulkPasteWordCount,
+    })
+    : undefined;
   const backHref = isInstructor ? `/dashboard/assignments/instructor/${submission.assignmentId}` : "/dashboard/assignments";
   const assignmentReceipts = isInstructor
     ? await db.query.assignmentSubmissionsTable.findMany({
@@ -89,7 +95,7 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
           </div>
           <ReceiptPdfDownloadButton
             activeWritingTime={formatDuration(receipt.activeSeconds)}
-            analysis={canViewAiSummary ? submission.document.legitimacyAnalysis?.analysis : undefined}
+            analysis={canViewAiSummary ? displayedAnalysis : undefined}
             assignmentTitle={submission.assignment.title}
             bulkPasteWordCount={bulkPasteWordCount}
             finalWordCount={receipt.finalWordCount}
@@ -123,13 +129,13 @@ export default async function ReceiptPage({ params }: { params: Promise<{ submis
         {canViewAiSummary && <div className="mt-8">
           <LegitimacyAnalysisCard
             documentId={submission.documentId}
-            initialAnalysis={submission.document.legitimacyAnalysis
-              ? { ...submission.document.legitimacyAnalysis.analysis, generatedAt: submission.document.legitimacyAnalysis.updatedAt.toISOString() }
+            initialAnalysis={displayedAnalysis
+              ? { ...displayedAnalysis, generatedAt: submission.document.legitimacyAnalysis!.updatedAt.toISOString() }
               : undefined}
             initialRefreshState={getLegitimacyAnalysisRefreshState({
               analysis: submission.document.legitimacyAnalysis,
-              contentHash: hashDocumentBody(submission.document.content),
             })}
+            milestoneCount={milestones.length}
           />
         </div>}
 
