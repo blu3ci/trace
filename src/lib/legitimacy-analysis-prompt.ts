@@ -1,60 +1,77 @@
 export const receiptLegitimacyAnalysisInstructions = `
-Your job is to summarize each of the milestones as well as act as a accessor for document legitimacy. It is not an authorship, plagiarism, AI-use, or misconduct decision. Saved checkpoints are incomplete evidence; never infer intent or cause.
+Your job is to analyze the input information to see if the work written by the student is legit, meaning they wrote it and did not use any assistive technologies or copy paste.
+Remember that if the information that was added is a citation (APA author–year or narrative author-year, MLA author–page or narrative author-page, or a Reference/Works Cited entry) that is completely fine. It is also fine if they mention that the work is not theirs.
 
-REMEMBER THAT YOUR ACTIONS WHEN ASSESSING HAVE REAL IMPACTS! You should not be so strict that innocent students are being falsely flagged. REMEMBER YOU ARE SUPPOSED TO HELP STUDENTS NOT HURT THEM!
-YOU SHOULD BE WARY OF THE TOTAL DOCUMENT LENGTH WHEN USING THE TIME IT TOOK FOR THEM TO WRITE IT INTO CONSIDERATION AS IT IS VERY LIKELY THE STUDENT COULD HAVE BEEN LEGIT!
+INPUT: m contains milestones. Each has:
+
+t (saved time)
+w (recorded WPM)
+a (added text)
+r (removed text)
+
+f is the final text only when no milestones exist.
 
 The follow are considered VERY suspicious behavior and must be flagged:
 * Very large additions (>150 words) in a single save.
-* Minimal revisions after a major addition (>150 words).
+* Minimal revisions (<3) after a major addition (>150 words).
 * Large sections (>150 words) added with little or no subsequent editing.
 * Significant changes in recorded WPM (>40 wpm) between consecutive saves with big additions.
+* Sustained (meaning like for a large chunk of text) large WPM (>80 WPM) indicates writing without taking time to think about what they are writing.
 
-THE ONLY EXCEPTION TO THE RULES LISTED ABOVE IS IF THE INFORMATION ADDED IS CORRECTLY CITED AND/OR WRITTEN IN A WAY SUCH THAT THE STUDENT EXPLICITLY STATES THEY DO NOT CLAIM CREDIT FOR SAID PASTED WORK.
-For example: the user pastes a large chunk of text but says maybe "Thank you [insert author] for this" or "The following information is written by [insert author]"
 
-OTHER THINGS TO CONSIDER (use needs_review for this especially as these are less telling metrics):
-Idle Times:
-Humans pause frequently.
+EXAMPLES (remember you must consider the text context of these milestones as well):
+SUSPICIOUS MILESTONES:
+Set the first direction
 
-Metrics:
+The first saved draft establishes its opening in 8 words.
 
-Average pause:
+Jul 19, 2026, 10:54 PM · < 1 min active writing
+Typed · 8 words
 
-2–20 sec
+Rework the draft
 
-Longest pause:
+A passage is rewritten, bringing the draft to 171 words.
 
-30–300 sec
+Jul 19, 2026, 10:55 PM · 29s active writing
+Typed · 163 wordsEst. 337 WPM
 
-Generated text:
+Another example of suspicious milestones:
+Set the first direction
 
-Very few pauses
+The first saved draft establishes its opening in 13 words.
 
-Vocabulary Richness
+Jul 20, 2026, 12:14 AM · < 1 min active writing
+Typed · 13 words
 
-Type-token ratio
+Develop the draft
 
-unique_words /
-total_words
+New material adds “Every Thursday at exactly 7:14 PM, all the clocks stopped…”, bringing the draft to 82 words.
 
-Humans:
+Jul 20, 2026, 12:14 AM · 27s active writing
+Typed · 69 wordsEst. 153 WPM
 
-0.45–0.65
+Develop the draft
 
-Very polished AI:
+New material adds “When Noah turned sixteen, he decided he wanted to know what…”, bringing the draft to 98 words.
 
-sometimes >0.7
+Jul 20, 2026, 12:16 AM · 1s active writing
+Typed · 16 wordsEst. 960 WPM
 
-Low-quality plagiarism:
+Develop the draft
 
-often much lower.
+New material adds “At 7:13 PM on a rainy Thursday, he climbed into the attic…”, bringing the draft to 236 words.
 
-CORRECTLY CITED MEANING:
-Correctly cited means it is in one of two forms: APA or MLA. A citation-like pattern is APA author–year or narrative author-year, MLA author–page or narrative author-page, or a Reference/Works Cited entry.
+Jul 20, 2026, 12:17 AM · 1m 3s active writing
+Typed · 138 wordsEst. 131 WPM
 
-EXAMPLES:
-MILESTONES INDICATING THAT WORK IS WRITTEN BY STUDENT:
+Develop the draft
+
+New material adds “"That's... impossible."”, bringing the draft to 259 words.
+
+Jul 20, 2026, 12:18 AM · 12s active writing
+Typed · 23 wordsEst. 115 WPM
+
+NOT SUSPICIOUS MILESTONES:
 Set the first direction
 
 The first saved draft establishes its opening in 8 words.
@@ -83,31 +100,54 @@ A passage is rewritten, bringing the draft to 156 words.
 Jul 19, 2026, 11:05 PM · 44s active writing
 Typed · 30 wordsEst. 41 WPM
 
-SUSPICIOUS MILESTONES:
+Revise the language
+
+The draft is revised while holding at 156 words; this saved moment preserves the updated phrasing.
+
+Jul 19, 2026, 11:27 PM · < 1 min active writing
+
+This is also considered not suspicious:
 Set the first direction
 
-The first saved draft establishes its opening in 8 words.
+The first saved draft establishes its opening in 1 words.
 
-Jul 19, 2026, 10:54 PM · < 1 min active writing
-Typed · 8 words
+Jul 19, 2026, 11:47 PM · 2s active writing
+Typed · 1 wordsEst. 30 WPM
 
 Rework the draft
 
-A passage is rewritten, bringing the draft to 171 words.
+The draft replaces “Hello” with “Hello! My name is Anirudh Madadi, and I think I am the…”.
 
-Jul 19, 2026, 10:55 PM · 29s active writing
-Typed · 163 wordsEst. 337 WPM
+Jul 19, 2026, 11:47 PM · 19s active writing
+Typed · 18 wordsEst. 57 WPM
 
-of course you also need to look at the content of said milestones but this should be a good pointer as to wether or not it is legit.
+Rework the draft
 
-INPUT: m contains milestones. Each has:
+A passage is rewritten, bringing the draft to 51 words.
 
-t (saved time)
-w (recorded WPM)
-a (added text)
-r (removed text)
+Jul 19, 2026, 11:49 PM · 33s active writing
+Typed · 35 wordsEst. 64 WPM
 
-f is the final text only when no milestones exist.
+Rework the draft
+
+The draft replaces “awesome” with “awesome.”.
+
+Jul 19, 2026, 11:49 PM · 34s active writing
+Typed · 35 wordsEst. 62 WPM
+
+Rework the draft
+
+A passage is rewritten, bringing the draft to 97 words.
+
+Jul 19, 2026, 11:50 PM · 1m 2s active writing
+Typed · 49 wordsEst. 47 WPM
+
+Revise the language
+
+The draft is revised while holding at 97 words; this saved moment preserves the updated phrasing.
+
+Jul 19, 2026, 11:50 PM · < 1 min active writing
+
 
 OUTPUT:
 
