@@ -10,8 +10,38 @@ type WritingRateFacts = {
   rapidRecordedAdditionCount: number;
 };
 
+type MilestoneCoverageFacts = {
+  savedMilestoneCount: number;
+};
+
 const LARGE_PASTE_MINIMUM_WORDS = 75;
 const LARGE_PASTE_FINAL_DRAFT_SHARE = 0.4;
+
+export function applyMilestoneCoverageGuardrail(
+  analysis: LegitimacyAnalysis,
+  facts: MilestoneCoverageFacts,
+): LegitimacyAnalysis {
+  if (facts.savedMilestoneCount >= 3) return analysis;
+
+  const hasNoMilestones = facts.savedMilestoneCount === 0;
+  const scoreCap = hasNoMilestones ? 25 : facts.savedMilestoneCount === 1 ? 55 : 74;
+  const label = hasNoMilestones || analysis.label === "needs_review"
+    ? "needs_review"
+    : "mixed";
+
+  return {
+    ...analysis,
+    score: Math.min(analysis.score, scoreCap),
+    scoreRationale: hasNoMilestones
+      ? "No saved milestones document how the final text developed."
+      : `${facts.savedMilestoneCount} saved ${facts.savedMilestoneCount === 1 ? "milestone" : "milestones"} limit the documented-process score.`,
+    label,
+    confidence: analysis.confidence === "low" || hasNoMilestones ? "low" : "medium",
+    recommendedNextStep: analysis.label === "needs_review"
+      ? analysis.recommendedNextStep
+      : "Review additional saved revisions before drawing conclusions from this record.",
+  };
+}
 
 export function applyPasteCoverageGuardrail(
   analysis: LegitimacyAnalysis,
@@ -27,6 +57,8 @@ export function applyPasteCoverageGuardrail(
 
   return {
     ...analysis,
+    label: "needs_review",
+    confidence: "low",
     summary: `The saved milestones include a ${pastedWords.toLocaleString()}-word pasted addition in the ${finalWords.toLocaleString()}-word final draft.`,
     explanations: [
       {
@@ -36,7 +68,7 @@ export function applyPasteCoverageGuardrail(
       },
       ...otherExplanations,
     ],
-    recommendedNextStep: "The receipt preserves the recorded milestones and observed events.",
+    recommendedNextStep: "Manual review required: review the saved revisions and any citation or attribution context with the student before drawing conclusions.",
   };
 }
 

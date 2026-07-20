@@ -14,6 +14,7 @@ export type CitationAssessment = (typeof citationAssessmentTypes)[number];
 
 export type LegitimacyAnalysis = {
   score: number;
+  scoreRationale: string;
   label: LegitimacyLabel;
   confidence: LegitimacyConfidence;
   summary: string;
@@ -58,11 +59,13 @@ export function getLegitimacyAnalysisRefreshState({
 export function isLegitimacyAnalysis(value: unknown): value is LegitimacyAnalysis {
   if (!isRecord(value)) return false;
 
-  const { citationAssessment, confidence, explanations, label, recommendedNextStep, score, summary } = value;
+  const { citationAssessment, confidence, explanations, label, recommendedNextStep, score, scoreRationale, summary } = value;
   return typeof score === "number"
     && Number.isInteger(score)
     && score >= 0
     && score <= 100
+    && typeof scoreRationale === "string"
+    && scoreRationale.length > 0
     && isOneOf(label, legitimacyLabels)
     && isOneOf(confidence, legitimacyConfidenceLevels)
     && typeof summary === "string"

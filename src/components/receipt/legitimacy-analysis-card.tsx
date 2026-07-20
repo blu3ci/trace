@@ -60,6 +60,27 @@ export function LegitimacyAnalysisCard({
               <p className="mt-2 text-sm leading-5 text-[#607067]">This reflects saved checkpoints and observed events, not authorship or academic misconduct.</p>
             </div>
 
+            {analysis.label === "needs_review" && <div role="status" className="mt-4 flex gap-3 rounded-lg border border-[#e8c8c4] bg-[#fbe9e7] p-4 text-[#7f2821]">
+              <CircleAlert className="mt-0.5 size-4 shrink-0" />
+              <div>
+                <p className="text-sm font-medium">Manual review required</p>
+                <p className="mt-1 text-sm leading-5">Review the saved record before drawing conclusions about the work.</p>
+              </div>
+            </div>}
+
+            <section className="mt-4 overflow-hidden rounded-lg border border-[#dbe7de] bg-white/75" aria-label="Documented process assessment">
+              <p className="border-b border-[#e4ece6] px-4 py-3 text-sm font-medium text-[#2e4134]">Documented process assessment</p>
+              <div className="grid divide-y divide-[#e4ece6] sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+                <AssessmentDetail label="Record score" value={`${analysis.score}/100`} detail={analysis.scoreRationale} />
+                <AssessmentDetail label="Evidence" value={analysis.label.replace("_", " ")} />
+                <AssessmentDetail label="Summary certainty" value={analysis.confidence} />
+              </div>
+              <div className="border-t border-[#e4ece6] px-4 py-3">
+                <p className="text-xs font-medium tracking-[0.08em] text-[#65716a] uppercase">Suggested next step</p>
+                <p className="mt-1 text-sm leading-5 text-[#526258]">{humanizeAnalysisText(analysis.recommendedNextStep)}</p>
+              </div>
+            </section>
+
             <MilestoneProgress milestoneCount={milestoneCount} />
 
             <section className="mt-4 overflow-hidden rounded-lg border border-[#dbe7de] bg-white/75" aria-label="Milestone highlights">
@@ -105,6 +126,16 @@ export function LegitimacyAnalysisCard({
         {error && <p role="alert" className="mt-3 flex items-center gap-2 text-sm text-[#a13d34]"><CircleAlert className="size-4" /> {error}</p>}
       </CardContent>
     </Card>
+  );
+}
+
+function AssessmentDetail({ detail, label, value }: { detail?: string; label: string; value: string }) {
+  return (
+    <div className="px-4 py-3">
+      <p className="text-xs text-[#65716a]">{label}</p>
+      <p className="mt-1 text-sm font-medium capitalize text-[#2e4134]">{value}</p>
+      {detail && <p className="mt-1 text-xs leading-4 text-[#65716a]">{humanizeAnalysisText(detail)}</p>}
+    </div>
   );
 }
 

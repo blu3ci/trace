@@ -13,9 +13,11 @@ import { receiptLegitimacyAnalysesTable } from "@/db/schema";
 import { receiptLegitimacyAnalysisSchema } from "@/formSchemas/receipt-legitimacy-analysis";
 import { receiptLegitimacyAnalysisInstructions } from "@/lib/legitimacy-analysis-prompt";
 import {
+  applyMilestoneCoverageGuardrail,
   applyPasteCoverageGuardrail,
   applyWritingRateCoverageGuardrail,
 } from "@/lib/legitimacy-analysis-guardrails";
+import { buildLegitimacyAnalysisRecord } from "@/lib/legitimacy-analysis-record";
 import {
   getLegitimacyAnalysisRefreshState,
   isLegitimacyAnalysis,
@@ -24,19 +26,18 @@ import {
 import { hashDocumentBody } from "@/lib/legitimacy-analysis.server";
 
 const ANALYSIS_MODEL = "gpt-5-nano";
-const MAX_CITATION_SIGNALS_PER_MILESTONE = 3;
-
 const legitimacyAnalysisSchema = {
   type: "object",
   properties: {
     score: { type: "integer", minimum: 0, maximum: 100 },
+    scoreRationale: { type: "string" },
     label: { type: "string", enum: ["strong", "mixed", "needs_review"] },
     confidence: { type: "string", enum: ["low", "medium", "high"] },
     summary: { type: "string" },
     explanations: {
       type: "array",
       minItems: 2,
-      maxItems: 4,
+      maxItems: 6,
       items: {
         type: "object",
         properties: {
@@ -68,6 +69,7 @@ const legitimacyAnalysisSchema = {
   },
   required: [
     "score",
+    "scoreRationale",
     "label",
     "confidence",
     "summary",
@@ -129,11 +131,9 @@ export async function generateDocumentLegitimacyAnalysis(
     orderBy: ({ createdAt }, { asc }) => asc(createdAt),
     columns: {
       activeSeconds: true,
-      blockCount: true,
       bulkPasteWordCount: true,
       content: true,
       createdAt: true,
-      typedWordCount: true,
       typingWordsPerMinute: true,
       wordCount: true,
     },
@@ -148,7 +148,6 @@ export async function generateDocumentLegitimacyAnalysis(
   try {
     const analysisInput = buildAnalysisInput({
       document,
-      assignment: submission?.assignment,
       receipt: submission?.receipt,
       milestones,
     });
@@ -156,9 +155,9 @@ export async function generateDocumentLegitimacyAnalysis(
       model: ANALYSIS_MODEL,
       store: false,
       reasoning: { effort: "low" },
-      max_output_tokens: 4_000,
+      max_output_tokens: 1_500,
       instructions: receiptLegitimacyAnalysisInstructions,
-      input: JSON.stringify(analysisInput),
+      input: JSON.stringify(analysisInput.record),
       text: {
         format: {
           type: "json_schema",
@@ -184,8 +183,11 @@ export async function generateDocumentLegitimacyAnalysis(
 
     const parsed = JSON.parse(response.output_text) as unknown;
     if (!isLegitimacyAnalysis(parsed)) throw new Error("The response did not match the expected analysis format.");
-    analysis = applyWritingRateCoverageGuardrail(
-      applyPasteCoverageGuardrail(parsed, analysisInput.analysisFacts),
+    analysis = applyMilestoneCoverageGuardrail(
+      applyWritingRateCoverageGuardrail(
+        applyPasteCoverageGuardrail(parsed, analysisInput.analysisFacts),
+        analysisInput.analysisFacts,
+      ),
       analysisInput.analysisFacts,
     );
   } catch (error) {
@@ -227,109 +229,52 @@ function getOpenAIClient(apiKey: string) {
 
 function buildAnalysisInput({
   document,
-  assignment,
   receipt,
   milestones,
 }: {
-  document: { content: Block[] | null; title: string };
-  assignment?: { title: string; description: string | null } | null;
-  receipt?: { activeSeconds: number; finalContent: Block[]; finalWordCount: number; revisionCount: number } | null;
+  document: { content: Block[] | null };
+  receipt?: { finalContent: Block[]; finalWordCount: number } | null;
   milestones: Array<{
     activeSeconds: number;
-    blockCount: number;
     bulkPasteWordCount: number;
     content: Block[] | null;
     createdAt: Date;
-    typedWordCount: number;
     typingWordsPerMinute: number;
     wordCount: number;
   }>;
 }) {
   const finalContent = receipt?.finalContent ?? document.content ?? [];
   const finalText = extractText(finalContent);
-  const timeline = milestones.map((milestone, index) => {
-    const text = extractText(milestone.content);
+  const record = buildLegitimacyAnalysisRecord(milestones, finalText);
+
+  const bulkPasteEvents = milestones.filter((milestone) => milestone.bulkPasteWordCount > 0);
+  const rapidRecordedAdditions = milestones.filter((milestone, index) => {
     const previous = milestones[index - 1];
-    const citationSignals = extractCitationSignals(text);
-    return {
-      milestone: index + 1,
-      savedAt: milestone.createdAt.toISOString(),
-      wordCount: milestone.wordCount,
-      wordChangeFromPrevious: previous ? milestone.wordCount - previous.wordCount : milestone.wordCount,
-      recordedWordsPerMinute: milestone.activeSeconds > 0
-        ? Math.round((Math.max(0, previous ? milestone.wordCount - previous.wordCount : milestone.wordCount) * 60) / milestone.activeSeconds)
-        : 0,
-      blockCount: milestone.blockCount,
-      activeSeconds: milestone.activeSeconds,
-      bulkPasteWordCount: milestone.bulkPasteWordCount,
-      typedWordCount: milestone.typedWordCount,
-      typingWordsPerMinute: milestone.typingWordsPerMinute,
-      citationSignals,
-    };
+    const wordChange = Math.max(0, previous ? milestone.wordCount - previous.wordCount : milestone.wordCount);
+    const wordsPerMinute = milestone.activeSeconds > 0
+      ? Math.round((wordChange * 60) / milestone.activeSeconds)
+      : 0;
+    return wordChange >= 75 && wordsPerMinute >= 250;
   });
 
-  const totalActiveSeconds = receipt?.activeSeconds
-    ?? milestones.reduce((total, milestone) => total + milestone.activeSeconds, 0);
-  const bulkPasteEvents = timeline.filter((milestone) => milestone.bulkPasteWordCount > 0);
-  const largestBulkPasteWordCount = bulkPasteEvents.reduce(
-    (largest, milestone) => Math.max(largest, milestone.bulkPasteWordCount),
-    0,
-  );
-  const citationSignalCount = timeline.reduce(
-    (total, milestone) => total + milestone.citationSignals.length,
-    0,
-  );
-  const finalCitationSignals = extractCitationSignals(finalText, 12);
-  const rapidRecordedAdditions = timeline.filter((milestone) => (
-    milestone.wordChangeFromPrevious >= 75
-    && milestone.activeSeconds > 0
-    && milestone.recordedWordsPerMinute >= 250
-  ));
-
   return {
-    assignment: {
-      title: assignment?.title ?? document.title,
-      description: assignment?.description ?? null,
-    },
     analysisFacts: {
-      savedMilestoneCount: timeline.length,
-      finalContentAvailable: finalText.length > 0,
+      savedMilestoneCount: milestones.length,
       finalWordCount: receipt?.finalWordCount ?? countWords(finalText),
-      revisionCount: receipt?.revisionCount ?? milestones.length,
-      recordedActiveSeconds: totalActiveSeconds,
-      milestonesWithRecordedActiveTime: timeline.filter((milestone) => milestone.activeSeconds > 0).length,
-      recordedTypedWordCount: timeline.reduce((total, milestone) => total + milestone.typedWordCount, 0),
-      milestonesWithTypingVelocity: timeline.filter((milestone) => milestone.typingWordsPerMinute > 0).length,
-      bulkPasteEventCount: bulkPasteEvents.length,
       totalBulkPasteWordCount: bulkPasteEvents.reduce(
         (total, milestone) => total + milestone.bulkPasteWordCount,
         0,
       ),
-      largestBulkPasteWordCount,
-      milestonesAfterLastBulkPaste: bulkPasteEvents.length
-        ? timeline.length - bulkPasteEvents.at(-1)!.milestone
-        : 0,
       rapidRecordedAdditionCount: rapidRecordedAdditions.length,
-      fastestRecordedWordsPerMinute: rapidRecordedAdditions.reduce(
-        (fastest, milestone) => Math.max(fastest, milestone.recordedWordsPerMinute),
-        0,
-      ),
-      citationSignalCount,
-      milestonesWithCitationSignals: timeline.filter((milestone) => milestone.citationSignals.length > 0).length,
-      finalCitationSignalCount: finalCitationSignals.length,
-      dataLimitations: [
-        "Saved milestones are checkpoints, not a full keystroke history.",
-        "Recorded active time does not include all planning, reading, or offline writing.",
-        "Citation signals are heuristic pattern matches and do not verify sources or citation quality.",
-      ],
+      fastestRecordedWordsPerMinute: milestones.reduce((fastest, milestone, index) => {
+        const previous = milestones[index - 1];
+        const wordChange = Math.max(0, previous ? milestone.wordCount - previous.wordCount : milestone.wordCount);
+        return milestone.activeSeconds > 0
+          ? Math.max(fastest, Math.round((wordChange * 60) / milestone.activeSeconds))
+          : fastest;
+      }, 0),
     },
-    receipt: {
-      finalWordCount: receipt?.finalWordCount ?? countWords(finalText),
-      revisionCount: receipt?.revisionCount ?? milestones.length,
-      totalActiveSeconds,
-      finalCitationSignals,
-    },
-    milestones: timeline,
+    record,
   };
 }
 
@@ -338,35 +283,10 @@ function countWords(value: string) {
   return normalized ? normalized.split(/\s+/).length : 0;
 }
 
-function extractCitationSignals(value: string, limit = MAX_CITATION_SIGNALS_PER_MILESTONE) {
-  const patterns = [
-    /\b(?:works cited|references|bibliography|sources consulted)\b/gi,
-    /\b(?:https?:\/\/\S+|doi:\s*\S+)/gi,
-    /\[[0-9]{1,3}\]/g,
-    /\([A-Z][A-Za-z'’-]+(?:\s+(?:and|&|et al\.)\s+[A-Z][A-Za-z'’-]+)?(?:,\s*)?(?:19|20)\d{2}(?:,\s*(?:p{1,2}\.)?\s*\d+(?:[-–]\d+)?)?\)/g,
-  ];
-  const signals: string[] = [];
-
-  for (const pattern of patterns) {
-    for (const match of value.matchAll(pattern)) {
-      signals.push(excerptAround(value, match.index ?? 0, match[0].length));
-      if (signals.length >= limit) return signals;
-    }
-  }
-
-  return signals;
-}
-
 function extractText(value: unknown): string {
   if (Array.isArray(value)) return value.map(extractText).join(" ");
   if (!value || typeof value !== "object") return "";
   const record = value as { content?: unknown; text?: unknown };
   if (typeof record.text === "string") return record.text;
   return extractText(record.content);
-}
-
-function excerptAround(value: string, start: number, length: number) {
-  const before = Math.max(0, start - 120);
-  const after = Math.min(value.length, start + length + 120);
-  return value.slice(before, after).replace(/\s+/g, " ").trim();
 }

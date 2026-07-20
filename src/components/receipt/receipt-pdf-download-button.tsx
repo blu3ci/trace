@@ -163,12 +163,14 @@ function drawSummaryPageHeading(document: PdfDocument) {
 }
 
 function getAnalysisHeight(document: PdfDocument, analysis: LegitimacyAnalysis) {
-  let height = 64;
+  let height = 102;
+  height += textHeight(document, analysis.scoreRationale, contentWidth - 24, 9, 12) + 8;
   height += textHeight(document, analysis.summary, contentWidth - 24, 11, 14) + 8;
   analysis.explanations.forEach((explanation) => {
     height += 28 + textHeight(document, explanation.detail, contentWidth - 42, 9, 12);
   });
   height += 54 + textHeight(document, analysis.citationAssessment.detail, contentWidth - 42, 9, 12);
+  height += 42 + textHeight(document, analysis.recommendedNextStep, contentWidth - 42, 9, 12);
   return height + 14;
 }
 
@@ -180,6 +182,10 @@ function drawAnalysis(document: PdfDocument, cursor: number, analysis: Legitimac
   setTextStyle(document, 14, colors.ink, "bold");
   document.text("Writing-process summary", page.margin + 12, y);
   y += 18;
+  setTextStyle(document, 8, colors.muted);
+  document.text(`Record score ${analysis.score}/100 · ${titleCase(analysis.label)} evidence · ${titleCase(analysis.confidence)} certainty`, page.margin + 12, y);
+  y += 16;
+  y = drawWrappedText(document, analysis.scoreRationale, page.margin + 12, y, contentWidth - 24, 9, 12, colors.muted) + 8;
   y = drawWrappedText(document, analysis.summary, page.margin + 12, y, contentWidth - 24, 11, 14, colors.ink, "bold") + 7;
 
   analysis.explanations.forEach((explanation) => {
@@ -197,7 +203,16 @@ function drawAnalysis(document: PdfDocument, cursor: number, analysis: Legitimac
   y = drawWrappedText(document, analysis.citationAssessment.detail, page.margin + 21, y + 27, contentWidth - 42, 9, 12, colors.muted) + 8;
   setTextStyle(document, 7, colors.muted);
   document.text("Pattern matches in saved text, not verified citations or sources.", page.margin + 21, y);
+  y += 24;
+  drawBox(document, page.margin + 12, y, contentWidth - 24, 42 + textHeight(document, analysis.recommendedNextStep, contentWidth - 42, 9, 12), colors.white);
+  setTextStyle(document, 8, colors.greenDark, "bold");
+  document.text("SUGGESTED NEXT STEP", page.margin + 21, y + 14);
+  y = drawWrappedText(document, analysis.recommendedNextStep, page.margin + 21, y + 27, contentWidth - 42, 9, 12, colors.muted);
   return y + 18;
+}
+
+function titleCase(value: string) {
+  return value.replace(/_/g, " ").replace(/\b\w/g, (character) => character.toUpperCase());
 }
 
 function drawJourneyHeading(document: PdfDocument, continued: boolean) {
