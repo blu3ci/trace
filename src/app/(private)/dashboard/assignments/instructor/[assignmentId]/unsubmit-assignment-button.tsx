@@ -33,7 +33,11 @@ export function UnsubmitAssignmentButton({
   function unsubmit() {
     startTransition(async () => {
       const result = await unsubmitAssignmentSubmission(assignmentId, submissionId);
-      if (!result.error) router.refresh();
+      if (!result.error) {
+        startTransition(() => {
+          router.refresh();
+        });
+      }
     });
   }
 

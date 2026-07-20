@@ -61,7 +61,7 @@ import {
 } from "@/components/ui/select";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 const SAVE_DELAY = 1500;
 const BULK_PASTE_WORD_THRESHOLD = 50;
@@ -85,6 +85,7 @@ export default function Editor({
   const [saveStatus, setSaveStatus] = useState<"idle" | "pending" | "saving" | "saved" | "error">("idle");
   const [saveRequest, setSaveRequest] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmissionTransitionPending, startSubmissionTransition] = useTransition();
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const activeMillis = useRef(0);
   const hasCapturedMilestone = useRef(false);
@@ -244,65 +245,67 @@ export default function Editor({
     requestSave();
   };
 
-  const submitFromEditor = async () => {
-    if (!assignmentId || isSubmitting) return;
+  const submitFromEditor = () => {
+    if (!assignmentId || isSubmitting || isSubmissionTransitionPending) return;
 
-    setIsSubmitting(true);
-    setSubmissionError(null);
-    if (pendingSaveTimer.current) {
-      window.clearTimeout(pendingSaveTimer.current);
-      pendingSaveTimer.current = null;
-    }
+    startSubmissionTransition(async () => {
+      setIsSubmitting(true);
+      setSubmissionError(null);
+      if (pendingSaveTimer.current) {
+        window.clearTimeout(pendingSaveTimer.current);
+        pendingSaveTimer.current = null;
+      }
 
-    try {
-      await saveQueue.current;
-      const document: Block[] = editor.document;
-      const now = Date.now();
-      const wordCount = countDocumentWords(document);
-      const documentText = normalizeDocumentText(extractText(document));
-      const activeMillisAtSave = activeMillis.current;
-      const bulkPasteWordCountAtSave = pendingBulkPasteWordCount.current;
-      const typedWordCountAtSave = pendingTypedWordCount.current;
-      const milestone = wordCount > 0
-        ? {
-          activeSeconds: Math.round(activeMillisAtSave / 1000),
-          blockCount: document.length,
-          bulkPasteWordCount: bulkPasteWordCountAtSave,
-          typedWordCount: typedWordCountAtSave,
-          typingWordsPerMinute: calculateTypingWordsPerMinute(
-            typedWordCountAtSave,
-            Math.round(activeMillisAtSave / 1000),
-          ),
-          wordCount,
+      try {
+        await saveQueue.current;
+        const document: Block[] = editor.document;
+        const now = Date.now();
+        const wordCount = countDocumentWords(document);
+        const documentText = normalizeDocumentText(extractText(document));
+        const activeMillisAtSave = activeMillis.current;
+        const bulkPasteWordCountAtSave = pendingBulkPasteWordCount.current;
+        const typedWordCountAtSave = pendingTypedWordCount.current;
+        const milestone = wordCount > 0
+          ? {
+            activeSeconds: Math.round(activeMillisAtSave / 1000),
+            blockCount: document.length,
+            bulkPasteWordCount: bulkPasteWordCountAtSave,
+            typedWordCount: typedWordCountAtSave,
+            typingWordsPerMinute: calculateTypingWordsPerMinute(
+              typedWordCountAtSave,
+              Math.round(activeMillisAtSave / 1000),
+            ),
+            wordCount,
+          }
+          : undefined;
+        setSaveStatus("saving");
+        const saveResult = await saveDocument(documentId, document, milestone);
+        if (saveResult?.error) throw new Error("Unable to save the final draft");
+
+        if (milestone) {
+          hasCapturedMilestone.current = true;
+          lastMilestoneAt.current = now;
+          lastMilestoneText.current = documentText;
+          activeMillis.current = Math.max(0, activeMillis.current - activeMillisAtSave);
+          pendingBulkPasteWordCount.current = Math.max(
+            0,
+            pendingBulkPasteWordCount.current - bulkPasteWordCountAtSave,
+          );
+          pendingTypedWordCount.current = Math.max(0, pendingTypedWordCount.current - typedWordCountAtSave);
         }
-        : undefined;
-      setSaveStatus("saving");
-      const saveResult = await saveDocument(documentId, document, milestone);
-      if (saveResult?.error) throw new Error("Unable to save the final draft");
 
-      if (milestone) {
-        hasCapturedMilestone.current = true;
-        lastMilestoneAt.current = now;
-        lastMilestoneText.current = documentText;
-        activeMillis.current = Math.max(0, activeMillis.current - activeMillisAtSave);
-        pendingBulkPasteWordCount.current = Math.max(
-          0,
-          pendingBulkPasteWordCount.current - bulkPasteWordCountAtSave,
-        );
-        pendingTypedWordCount.current = Math.max(0, pendingTypedWordCount.current - typedWordCountAtSave);
+        const submissionResult = await submitAssignmentSubmission(assignmentId);
+        if (submissionResult.error || !submissionResult.receiptHref) {
+          throw new Error("Unable to submit the assignment");
+        }
+
+        router.push(submissionResult.receiptHref);
+      } catch (error) {
+        setSaveStatus("error");
+        setSubmissionError(error instanceof Error ? error.message : "Unable to submit the assignment");
+        setIsSubmitting(false);
       }
-
-      const submissionResult = await submitAssignmentSubmission(assignmentId);
-      if (submissionResult.error || !submissionResult.receiptHref) {
-        throw new Error("Unable to submit the assignment");
-      }
-
-      router.push(submissionResult.receiptHref);
-    } catch (error) {
-      setSaveStatus("error");
-      setSubmissionError(error instanceof Error ? error.message : "Unable to submit the assignment");
-      setIsSubmitting(false);
-    }
+    });
   };
 
   function recordBulkPaste(event: ClipboardEvent) {
@@ -326,7 +329,7 @@ export default function Editor({
         }}
         isSubmitted={isSubmitted}
         assignmentId={assignmentId}
-        isSubmitting={isSubmitting}
+        isSubmitting={isSubmitting || isSubmissionTransitionPending}
         submissionError={submissionError}
         onSubmitAssignment={submitFromEditor}
         receiptHref={receiptHref}
@@ -431,11 +434,11 @@ function DocumentHeader({
   assignmentId?: string;
   isSubmitting: boolean;
   submissionError: string | null;
-  onSubmitAssignment: () => Promise<void>;
+  onSubmitAssignment: () => void;
   receiptHref: string;
 }) {
   const [draftTitle, setDraftTitle] = useState(title);
-  const [isSavingTitle, setIsSavingTitle] = useState(false);
+  const [isSavingTitle, startTitleSaveTransition] = useTransition();
 
   async function exportPDF() {
     const exporter = new PDFExporter(editor.schema, documentPdfSchemaMappings);
@@ -460,7 +463,7 @@ function DocumentHeader({
     window.URL.revokeObjectURL(link.href);
   }
 
-  async function handleTitleBlur() {
+  function handleTitleBlur() {
     if (isSubmitted) return;
 
     const trimmedTitle = draftTitle.trim();
@@ -470,15 +473,13 @@ function DocumentHeader({
       return;
     }
 
-    setIsSavingTitle(true);
-    const result = await updateDocumentTitle(documentId, {
-      title: trimmedTitle,
-    });
-    setIsSavingTitle(false);
+    startTitleSaveTransition(async () => {
+      const result = await updateDocumentTitle(documentId, {
+        title: trimmedTitle,
+      });
 
-    if (result?.error) {
-      setDraftTitle(title);
-    }
+      if (result?.error) setDraftTitle(title);
+    });
   }
 
   return (
@@ -544,7 +545,7 @@ function DocumentHeader({
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel disabled={isSubmitting}>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={() => { void onSubmitAssignment(); }} disabled={isSubmitting}>
+                  <AlertDialogAction onClick={onSubmitAssignment} disabled={isSubmitting}>
                     {isSubmitting ? "Submitting…" : "Submit and create receipt"}
                   </AlertDialogAction>
                 </AlertDialogFooter>

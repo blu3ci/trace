@@ -5,7 +5,7 @@ import "server-only";
 import { auth } from "@clerk/nextjs/server";
 import { Block } from "@blocknote/core";
 import OpenAI from "openai";
-import { revalidatePath } from "next/cache";
+import { refresh, revalidatePath } from "next/cache";
 import * as yup from "yup";
 
 import { db } from "@/db";
@@ -220,6 +220,7 @@ export async function generateDocumentLegitimacyAnalysis(
 
   revalidatePath(`/receipts/document/${documentId}`);
   if (submission?.receipt) revalidatePath(`/receipts/${submission.id}`);
+  refresh();
   return { error: false, analysis, generatedAt: generatedAt.toISOString() };
 }
 

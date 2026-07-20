@@ -3,6 +3,7 @@
 import "server-only";
 
 import { auth } from "@clerk/nextjs/server";
+import { refresh, revalidatePath } from "next/cache";
 import { db } from "@/db";
 import { userRolesTable } from "@/db/schema";
 import { userRoleSchema } from "@/formSchemas/user-role";
@@ -24,5 +25,8 @@ export async function chooseUserRole(
     return { error: true, message: "Choose whether you’ll use trace as a student or instructor." };
   }
 
+  revalidatePath("/onboarding");
+  revalidatePath("/dashboard");
+  refresh();
   return { error: false };
 }

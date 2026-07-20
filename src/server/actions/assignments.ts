@@ -4,7 +4,7 @@ import "server-only";
 
 import { auth } from "@clerk/nextjs/server";
 import { randomUUID } from "node:crypto";
-import { revalidatePath } from "next/cache";
+import { refresh, revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@/db";
@@ -53,6 +53,7 @@ export async function createAssignment(
       if (created.length > 0) {
         revalidatePath("/dashboard/assignments");
         revalidatePath("/dashboard/assignments/instructor");
+        refresh();
         return { error: false };
       }
     }
@@ -100,6 +101,7 @@ export async function joinAssignment(
 
   revalidatePath("/dashboard/assignments");
   revalidatePath("/dashboard/assignments/instructor");
+  refresh();
   return { error: false };
 }
 
@@ -111,11 +113,13 @@ export async function updateAssignment(
   if (!userId) return { error: true };
   if (!(await hasUserRole(userId, "instructor"))) return { error: true };
 
+  let assignmentId: string;
   try {
-    const { assignmentId, course, description, dueDate, title } = await updateAssignmentSchema.validate({
+    const { assignmentId: validatedAssignmentId, course, description, dueDate, title } = await updateAssignmentSchema.validate({
       assignmentId: unsafeAssignmentId,
       ...unsafeData,
     });
+    assignmentId = validatedAssignmentId;
     const { rowCount } = await db
       .update(assignmentsTable)
       .set({
@@ -135,7 +139,8 @@ export async function updateAssignment(
     return { error: true };
   }
 
-  revalidateAssignmentPaths(unsafeAssignmentId);
+  revalidateAssignmentPaths(assignmentId);
+  refresh();
   return { error: false };
 }
 
@@ -144,8 +149,9 @@ export async function archiveAssignment(unsafeAssignmentId: string): Promise<{ e
   if (!userId) return { error: true };
   if (!(await hasUserRole(userId, "instructor"))) return { error: true };
 
+  let assignmentId: string;
   try {
-    const { assignmentId } = await assignmentSubmissionSchema.validate({ assignmentId: unsafeAssignmentId });
+    ({ assignmentId } = await assignmentSubmissionSchema.validate({ assignmentId: unsafeAssignmentId }));
     const { rowCount } = await db
       .update(assignmentsTable)
       .set({ archivedAt: new Date() })
@@ -160,7 +166,8 @@ export async function archiveAssignment(unsafeAssignmentId: string): Promise<{ e
     return { error: true };
   }
 
-  revalidateAssignmentPaths(unsafeAssignmentId);
+  revalidateAssignmentPaths(assignmentId);
+  refresh();
   return { error: false };
 }
 
@@ -220,6 +227,8 @@ export async function unsubmitAssignmentSubmission(
 
   revalidateAssignmentPaths(assignmentId);
   revalidatePath(`/document/${submission.documentId}`);
+  revalidatePath(`/receipts/${submission.id}`);
+  refresh();
   return { error: false };
 }
 
@@ -251,6 +260,7 @@ export async function regenerateAssignmentAccessCode(
         .returning({ accessCode: assignmentsTable.accessCode });
       if (updated[0]) {
         revalidateAssignmentPaths(assignmentId);
+        refresh();
         return { code: updated[0].accessCode, error: false };
       }
       return { error: true };

@@ -5,6 +5,7 @@ import { Controller, useForm } from "react-hook-form";
 import * as yup from "yup";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { useTransition } from "react";
 import { ArrowLeft, ClipboardList, Trash2 } from "lucide-react";
 
 import {
@@ -67,6 +68,7 @@ export function DocumentSettingsForm({
 }) {
   const isEditable = canEditDocument(isSubmitted ? new Date() : null);
   const router = useRouter();
+  const [isPending, startTransition] = useTransition();
   const form = useForm({
     resolver: yupResolver(updateDocumentTitleSchema),
     defaultValues: { title },
@@ -76,43 +78,49 @@ export function DocumentSettingsForm({
     defaultValues: { assignmentId: "", documentId },
   });
 
-  async function onSubmit(
+  function onSubmit(
     values: yup.InferType<typeof updateDocumentTitleSchema>,
   ) {
-    const result = await updateDocumentTitle(documentId, values);
+    startTransition(async () => {
+      const result = await updateDocumentTitle(documentId, values);
 
-    if (result?.error) {
-      form.setError("root", {
-        message: result.message ?? "There was an error updating this document.",
-      });
-      return;
-    }
+      if (result?.error) {
+        form.setError("root", {
+          message: result.message ?? "There was an error updating this document.",
+        });
+        return;
+      }
 
-    router.push("/dashboard");
+      router.push("/dashboard");
+    });
   }
 
-  async function onDelete() {
-    const result = await deleteDocument(documentId);
+  function onDelete() {
+    startTransition(async () => {
+      const result = await deleteDocument(documentId);
 
-    if (result?.error) {
-      form.setError("root", {
-        message: result.message ?? "There was an error deleting this document.",
-      });
-    }
+      if (result?.error) {
+        form.setError("root", {
+          message: result.message ?? "There was an error deleting this document.",
+        });
+      }
+    });
   }
 
-  async function onAttachToAssignment(
+  function onAttachToAssignment(
     values: yup.InferType<typeof attachDocumentToAssignmentSchema>,
   ) {
-    const result = await attachDocumentToAssignment(documentId, values.assignmentId);
-    if (result.error) {
-      assignmentForm.setError("root", {
-        message: result.message ?? "This document could not be attached. It may already be assigned.",
-      });
-      return;
-    }
+    startTransition(async () => {
+      const result = await attachDocumentToAssignment(documentId, values.assignmentId);
+      if (result.error) {
+        assignmentForm.setError("root", {
+          message: result.message ?? "This document could not be attached. It may already be assigned.",
+        });
+        return;
+      }
 
-    router.push(`/document/${documentId}`);
+      router.push(`/document/${documentId}`);
+    });
   }
 
   return (
@@ -217,7 +225,7 @@ export function DocumentSettingsForm({
                       )}
                     />
                     {assignmentForm.formState.errors.root && <FieldError errors={[assignmentForm.formState.errors.root]} />}
-                    <Button type="submit" disabled={assignmentForm.formState.isSubmitting}>Use this document</Button>
+                    <Button type="submit" disabled={assignmentForm.formState.isSubmitting || isPending}>Use this document</Button>
                   </FieldGroup>
                 </form>
               )}
@@ -227,7 +235,7 @@ export function DocumentSettingsForm({
         <CardFooter className="flex flex-wrap justify-between gap-3">
           <AlertDialog>
             <AlertDialogTrigger
-              disabled={!isEditable || form.formState.isSubmitting}
+              disabled={!isEditable || form.formState.isSubmitting || isPending}
               render={<Button variant="destructive" />}
             >
               <Trash2 /> Delete document
@@ -241,13 +249,13 @@ export function DocumentSettingsForm({
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
-                <AlertDialogCancel disabled={form.formState.isSubmitting}>
+                <AlertDialogCancel disabled={form.formState.isSubmitting || isPending}>
                   Cancel
                 </AlertDialogCancel>
                 <AlertDialogAction
                   variant="destructive"
                   onClick={onDelete}
-                  disabled={form.formState.isSubmitting}
+                  disabled={form.formState.isSubmitting || isPending}
                 >
                   Delete document
                 </AlertDialogAction>
@@ -257,7 +265,7 @@ export function DocumentSettingsForm({
           <Button
             type="submit"
             form="document-settings-form"
-            disabled={!isEditable || form.formState.isSubmitting}
+            disabled={!isEditable || form.formState.isSubmitting || isPending}
           >
             Save changes
           </Button>

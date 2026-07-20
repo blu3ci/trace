@@ -13,7 +13,7 @@ import {
 } from "@/formSchemas/document";
 import { auth } from "@clerk/nextjs/server";
 import { and, eq, isNotNull, isNull, notExists } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
+import { refresh, revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import * as yup from "yup";
 import "server-only";
@@ -160,8 +160,10 @@ export async function attachDocumentToAssignment(
 
   revalidatePath("/dashboard");
   revalidatePath("/dashboard/assignments");
+  revalidatePath(`/dashboard/assignments/instructor/${assignmentId}`);
   revalidatePath(`/document/${documentId}`);
   revalidatePath(`/document/${documentId}/settings`);
+  refresh();
   return { error: false };
 }
 
@@ -231,7 +233,10 @@ export async function submitAssignmentSubmission(
 
   revalidatePath("/dashboard/assignments");
   revalidatePath("/dashboard/assignments/instructor");
+  revalidatePath(`/dashboard/assignments/instructor/${assignmentId}`);
   revalidatePath(`/document/${submission.documentId}`);
+  revalidatePath(`/receipts/${submission.id}`);
+  refresh();
   return { error: false, receiptHref: `/receipts/${submission.id}` };
 }
 
@@ -261,6 +266,7 @@ export async function createDocument(
     return { error: true };
   }
 
+  revalidatePath("/dashboard");
   redirect(`/document/${documentId}`);
 }
 
@@ -293,6 +299,8 @@ export async function updateDocumentTitle(
 
   revalidatePath(`/document/${documentId}`);
   revalidatePath("/dashboard");
+  revalidatePath(`/receipts/document/${documentId}`);
+  refresh();
 
   return { error: false };
 }
@@ -319,6 +327,7 @@ export async function deleteDocument(documentId: string): Promise<{ error: boole
   }
 
   revalidatePath("/dashboard");
+  revalidatePath(`/receipts/document/${documentId}`);
   redirect("/dashboard");
 }
 

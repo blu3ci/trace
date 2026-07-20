@@ -14,8 +14,8 @@ import { Badge } from "@/components/ui/badge";
 import { db } from "@/db";
 import {
   createAssignmentSubmission,
-  submitAssignmentSubmissionFromForm,
 } from "@/server/actions/documents";
+import { MarkAssignmentSubmittedButton } from "@/components/assignments/mark-assignment-submitted-button";
 import { JoinAssignmentForm } from "./join-assignment-form";
 import { hasUserRole } from "@/lib/user-role";
 
@@ -127,11 +127,7 @@ export default async function AssignmentsPage() {
                               {submission.receipt && <Button variant="outline" nativeButton={false} render={<Link href={`/receipts/${submission.id}`} />}>View receipt</Button>}
                             </>
                           ) : (
-                            <form action={submitAssignmentSubmissionFromForm.bind(null, assignment.id)}>
-                              <Button type="submit">
-                                <CheckCircle2 className="size-4" /> Mark as submitted
-                              </Button>
-                            </form>
+                            <MarkAssignmentSubmittedButton assignmentId={assignment.id} />
                           )}
                         </div>
                       ) : (

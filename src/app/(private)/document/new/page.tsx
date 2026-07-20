@@ -33,15 +33,18 @@ export default function NewDocumentPage() {
       title: "Untitled Document",
     },
   });
+  const [isPending, startTransition] = React.useTransition();
 
-  async function onSubmit(values: yup.InferType<typeof newDocumentSchema>) {
-    const data = await createDocument(values);
+  function onSubmit(values: yup.InferType<typeof newDocumentSchema>) {
+    startTransition(async () => {
+      const data = await createDocument(values);
 
-    if (data?.error) {
-      form.setError("root", {
-        message: "There was an error creating your document",
-      });
-    }
+      if (data?.error) {
+        form.setError("root", {
+          message: "There was an error creating your document",
+        });
+      }
+    });
   }
 
   return (
@@ -95,7 +98,7 @@ export default function NewDocumentPage() {
             >
               Cancel
             </Button>
-            <Button type="submit" form="new-document-form">
+            <Button type="submit" form="new-document-form" disabled={form.formState.isSubmitting || isPending}>
               Create
             </Button>
           </Field>

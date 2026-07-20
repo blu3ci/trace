@@ -5,6 +5,8 @@ import { Controller, useForm } from "react-hook-form";
 import * as yup from "yup";
 import { format } from "date-fns";
 import { CalendarIcon, Plus, Save } from "lucide-react";
+import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -20,6 +22,7 @@ type AssignmentFormProps = {
 };
 
 export function AssignmentForm({ assignment }: AssignmentFormProps) {
+  const router = useRouter();
   const isEditing = Boolean(assignment);
   const form = useForm({
     resolver: yupResolver(newAssignmentSchema),
@@ -30,18 +33,26 @@ export function AssignmentForm({ assignment }: AssignmentFormProps) {
       description: assignment?.description ?? "",
     },
   });
+  const [isPending, startTransition] = useTransition();
 
-  async function onSubmit(values: yup.InferType<typeof newAssignmentSchema>) {
-    const data = assignment ? await updateAssignment(assignment.id, values) : await createAssignment(values);
+  function onSubmit(values: yup.InferType<typeof newAssignmentSchema>) {
+    startTransition(async () => {
+      const data = assignment ? await updateAssignment(assignment.id, values) : await createAssignment(values);
 
-    if (data?.error) {
-      form.setError("root", {
-        message: `There was an error ${isEditing ? "saving" : "adding"} your assignment`,
+      if (data?.error) {
+        startTransition(() => {
+          form.setError("root", {
+            message: `There was an error ${isEditing ? "saving" : "adding"} your assignment`,
+          });
+        });
+        return;
+      }
+
+      startTransition(() => {
+        form.reset(isEditing ? values : undefined);
+        router.refresh();
       });
-      return;
-    }
-
-    form.reset(isEditing ? values : undefined);
+    });
   }
 
   return (
@@ -117,7 +128,7 @@ export function AssignmentForm({ assignment }: AssignmentFormProps) {
             </Field>
           )}
         />
-        <Button type="submit" className="w-full bg-[#315943] hover:bg-[#254735]" disabled={form.formState.isSubmitting}>
+        <Button type="submit" className="w-full bg-[#315943] hover:bg-[#254735]" disabled={form.formState.isSubmitting || isPending}>
           {isEditing ? "Save assignment" : "Add assignment"} {isEditing ? <Save data-icon="inline-end" /> : <Plus data-icon="inline-end" />}
         </Button>
       </FieldGroup>

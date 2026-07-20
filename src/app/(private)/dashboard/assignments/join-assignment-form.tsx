@@ -3,6 +3,7 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import { Controller, useForm } from "react-hook-form";
 import * as yup from "yup";
+import { useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { Field, FieldError, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -15,18 +16,21 @@ export function JoinAssignmentForm() {
     resolver: yupResolver(joinAssignmentSchema),
     defaultValues: { accessCode: "" },
   });
+  const [isPending, startTransition] = useTransition();
 
-  async function onSubmit(values: yup.InferType<typeof joinAssignmentSchema>) {
-    const data = await joinAssignment(values);
+  function onSubmit(values: yup.InferType<typeof joinAssignmentSchema>) {
+    startTransition(async () => {
+      const data = await joinAssignment(values);
 
-    if (data.error) {
-      form.setError("root", {
-        message: data.message ?? "We couldn’t join that assignment.",
-      });
-      return;
-    }
+      if (data.error) {
+        form.setError("root", {
+          message: data.message ?? "We couldn’t join that assignment.",
+        });
+        return;
+      }
 
-    form.reset();
+      form.reset();
+    });
   }
 
   return (
@@ -54,7 +58,7 @@ export function JoinAssignmentForm() {
             </Field>
           )}
         />
-        <Button type="submit" variant="outline" className="w-full" disabled={form.formState.isSubmitting}>
+        <Button type="submit" variant="outline" className="w-full" disabled={form.formState.isSubmitting || isPending}>
           Join assignment
         </Button>
       </FieldGroup>
