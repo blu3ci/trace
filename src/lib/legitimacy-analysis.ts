@@ -38,8 +38,7 @@ export type LegitimacyAnalysisRefreshState =
   | { canRefresh: true }
   | { canRefresh: false; message: string };
 
-// TODO: change back to 10 * 60 * 1000
-export const LEGITIMACY_ANALYSIS_COOLDOWN_MS = 1000;
+export const LEGITIMACY_ANALYSIS_COOLDOWN_MS = 10 * 60 * 1000;
 
 export function getLegitimacyAnalysisRefreshState({
   analysis,
