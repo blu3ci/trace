@@ -1,6 +1,7 @@
 import Link from "next/link";
 import {
   ArrowRight,
+  BrainCircuit,
   Check,
   Clock3,
   FileText,
@@ -49,7 +50,7 @@ const phases = [
 const principles = [
   "Create assignments, share an access code, and review submitted work in one workspace",
   "See active writing time, milestones, and sentence-level changes beside the final draft",
-  "Export a clear receipt without treating activity data as an authorship verdict",
+  "Use an AI process assessment to surface revision, timing, and writing-pattern evidence",
 ];
 
 export default async function Home() {
@@ -110,7 +111,7 @@ export default async function Home() {
               <p className="mt-6 max-w-xl text-lg leading-8 text-[#607067] sm:text-xl">
                 trace gives students a calm place to write and gives instructors
                 a clear receipt of saved revision milestones, active writing time,
-                and what changed along the way.
+                what changed, and an AI process assessment.
               </p>
             </Reveal>
             <Reveal triggerOnMount delay={500} animationClassName="slide-in-from-bottom-4">
@@ -167,7 +168,7 @@ export default async function Home() {
             </p>
           </Reveal>
 
-          <div className="mt-12 grid gap-5 md:grid-cols-3">
+          <div className="mt-12 grid gap-5 md:grid-cols-2 lg:grid-cols-4">
             <Reveal delay={100} className="h-full">
               <FeatureCard
                 icon={FileText}
@@ -186,10 +187,18 @@ export default async function Home() {
             </Reveal>
             <Reveal delay={340} className="h-full">
               <FeatureCard
-                icon={Stamp}
+                icon={BrainCircuit}
                 number="03"
+                title="Assess the process"
+                text="AI reviews milestone timing, additions, revisions, and recorded writing pace to surface process evidence for instructors."
+              />
+            </Reveal>
+            <Reveal delay={460} className="h-full">
+              <FeatureCard
+                icon={Stamp}
+                number="04"
                 title="Review and export the receipt"
-                text="Instructors review the final draft beside its revision history, then download a receipt with the same evidence."
+                text="Instructors review the final draft beside its history and assessment, then download a receipt with the same evidence."
               />
             </Reveal>
           </div>
@@ -206,7 +215,7 @@ export default async function Home() {
               For educators
             </Badge>
             <h2 className="mt-5 text-3xl font-semibold tracking-[-0.05em] sm:text-5xl">
-              Review a record, not a score.
+              Review the record and its assessment.
             </h2>
             <p className="mt-5 max-w-xl text-lg leading-8 text-[#65716a]">
               Instructors create assignments, share a join code, and review each
@@ -272,6 +281,15 @@ export default async function Home() {
                   A claim was rewritten with supporting evidence. The receipt
                   preserves the removed sentence and the added material.
                 </p>
+              </div>
+              <div className="rounded-xl border border-[#9bcbaa]/35 bg-[#b9d9c1]/10 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <p className="flex items-center gap-2 text-xs font-medium tracking-[0.1em] text-[#b9d9c1] uppercase"><BrainCircuit className="size-3.5" /> AI process assessment</p>
+                    <p className="mt-2 text-sm leading-6 text-[#edf2ee]">Connected revisions and recorded writing activity support a strong documented process.</p>
+                  </div>
+                  <span className="shrink-0 text-2xl font-semibold">91<span className="text-xs text-[#adbbb1]">/100</span></span>
+                </div>
               </div>
               <div className="flex items-center gap-2 text-xs text-[#adbbb1]">
                 <span className="size-1.5 rounded-full bg-[#91c49e]" /> Ready to

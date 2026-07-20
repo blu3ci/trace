@@ -16,7 +16,7 @@ export default function HowTraceWorksPage() {
       <header className="max-w-2xl py-8 sm:py-10">
         <p className="text-sm font-semibold tracking-[0.12em] text-[#567160] uppercase">Getting started</p>
         <h1 className="mt-3 text-3xl font-semibold tracking-[-0.045em] sm:text-4xl">How trace works</h1>
-        <p className="mt-3 text-lg leading-7 text-[#65716a]">trace makes the development of a draft easier to revisit. It is a record of writing, not a judgment about a writer.</p>
+        <p className="mt-3 text-lg leading-7 text-[#65716a]">trace captures a draft&apos;s development so instructors can review saved revisions, writing activity, and an AI process assessment in one receipt.</p>
       </header>
 
       <section aria-label="The trace writing process" className="grid gap-4 md:grid-cols-3">

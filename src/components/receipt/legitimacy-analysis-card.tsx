@@ -50,14 +50,14 @@ export function LegitimacyAnalysisCard({
     <Card className="border-[#cfddd2] bg-[linear-gradient(135deg,#f7fbf8_0%,#ffffff_55%,#f0f7f1_100%)] shadow-sm">
       <CardHeader className="border-b border-[#dbe7de] bg-white/45">
         <CardTitle className="flex items-center gap-2 text-base"><BrainCircuit className="size-4 text-[#315943]" /> Writing-process summary</CardTitle>
-        <p className="mt-1.5 text-sm leading-5 text-[#607067]">A factual narrative of saved milestones and observed record notes.</p>
+        <p className="mt-1.5 text-sm leading-5 text-[#607067]">An AI assessment of saved milestones, writing pace, and revision activity.</p>
       </CardHeader>
       <CardContent>
         {analysis ? (
           <div key={analysis.generatedAt} className="motion-safe:animate-in motion-safe:fade-in-0 motion-safe:zoom-in-95 motion-safe:slide-in-from-bottom-2 duration-500">
             <div className="rounded-lg border border-[#dbe7de] bg-white/70 p-4">
               <p className="max-w-3xl font-medium leading-6 text-[#26362c]">{humanizeAnalysisText(analysis.summary)}</p>
-              <p className="mt-2 text-sm leading-5 text-[#607067]">This reflects saved checkpoints and observed events, not authorship or academic misconduct.</p>
+              <p className="mt-2 text-sm leading-5 text-[#607067]">Review the score, evidence, and recommended next step alongside the saved record.</p>
             </div>
 
             {analysis.label === "needs_review" && <div role="status" className="mt-4 flex gap-3 rounded-lg border border-[#e8c8c4] bg-[#fbe9e7] p-4 text-[#7f2821]">
@@ -106,20 +106,20 @@ export function LegitimacyAnalysisCard({
             </div>
 
             <div className="mt-4 flex flex-col gap-3 border-t border-[#dbe7de] pt-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm leading-5 text-[#607067]">Refresh to create a new factual summary from the saved milestones.</p>
+              <p className="text-sm leading-5 text-[#607067]">Refresh to update this assessment from the latest saved milestones.</p>
               <Button type="button" variant="outline" size="sm" disabled={isPending || !refreshState.canRefresh} onClick={runAnalysis} className="shrink-0">
                 {isPending ? <LoaderCircle className="animate-spin" /> : <RefreshCw />}
-                Refresh summary
+                Refresh assessment
               </Button>
             </div>
             {!refreshState.canRefresh && <p className="mt-3 text-sm text-[#607067]">{refreshState.message}</p>}
           </div>
         ) : (
           <div className="rounded-lg border border-dashed border-[#b9cfbd] bg-white/70 p-4 sm:flex sm:items-center sm:justify-between sm:gap-5">
-            <p className="text-sm leading-5 text-[#607067]">Create a factual summary of this document&apos;s saved writing milestones.</p>
+            <p className="text-sm leading-5 text-[#607067]">Generate an AI assessment from this document&apos;s saved writing milestones.</p>
             <Button type="button" className="mt-4 sm:mt-0" disabled={isPending} onClick={runAnalysis}>
               {isPending ? <LoaderCircle className="animate-spin" /> : <Sparkles />}
-              {isPending ? "Summarizing milestones…" : "Summarize milestones"}
+              {isPending ? "Analyzing writing process…" : "Generate assessment"}
             </Button>
           </div>
         )}
