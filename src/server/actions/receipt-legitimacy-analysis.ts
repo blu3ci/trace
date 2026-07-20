@@ -25,7 +25,7 @@ import {
 } from "@/lib/legitimacy-analysis";
 import { hashDocumentBody } from "@/lib/legitimacy-analysis.server";
 
-const ANALYSIS_MODEL = "gpt-5-nano";
+const ANALYSIS_MODEL = "gpt-5.4-nano";
 const legitimacyAnalysisSchema = {
   type: "object",
   properties: {
@@ -155,7 +155,7 @@ export async function generateDocumentLegitimacyAnalysis(
       model: ANALYSIS_MODEL,
       store: false,
       reasoning: { effort: "low" },
-      max_output_tokens: 1_500,
+      max_output_tokens: 5_500,
       instructions: receiptLegitimacyAnalysisInstructions,
       input: JSON.stringify(analysisInput.record),
       text: {

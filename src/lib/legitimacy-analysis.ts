@@ -1,6 +1,10 @@
 export const legitimacyLabels = ["strong", "mixed", "needs_review"] as const;
 export const legitimacyConfidenceLevels = ["low", "medium", "high"] as const;
-export const legitimacyImpactTypes = ["supports", "neutral", "needs_review"] as const;
+export const legitimacyImpactTypes = [
+  "supports",
+  "neutral",
+  "needs_review",
+] as const;
 export const citationAssessmentTypes = [
   "citation_evidence_present",
   "citation_evidence_limited",
@@ -34,7 +38,8 @@ export type LegitimacyAnalysisRefreshState =
   | { canRefresh: true }
   | { canRefresh: false; message: string };
 
-export const LEGITIMACY_ANALYSIS_COOLDOWN_MS = 10 * 60 * 1000;
+// TODO: change back to 10 * 60 * 1000
+export const LEGITIMACY_ANALYSIS_COOLDOWN_MS = 1000;
 
 export function getLegitimacyAnalysisRefreshState({
   analysis,
@@ -45,7 +50,8 @@ export function getLegitimacyAnalysisRefreshState({
 }): LegitimacyAnalysisRefreshState {
   if (!analysis) return { canRefresh: true };
 
-  const availableAt = analysis.updatedAt.getTime() + LEGITIMACY_ANALYSIS_COOLDOWN_MS;
+  const availableAt =
+    analysis.updatedAt.getTime() + LEGITIMACY_ANALYSIS_COOLDOWN_MS;
   if (availableAt > now.getTime()) {
     return {
       canRefresh: false,
@@ -56,51 +62,77 @@ export function getLegitimacyAnalysisRefreshState({
   return { canRefresh: true };
 }
 
-export function isLegitimacyAnalysis(value: unknown): value is LegitimacyAnalysis {
+export function isLegitimacyAnalysis(
+  value: unknown,
+): value is LegitimacyAnalysis {
   if (!isRecord(value)) return false;
 
-  const { citationAssessment, confidence, explanations, label, recommendedNextStep, score, scoreRationale, summary } = value;
-  return typeof score === "number"
-    && Number.isInteger(score)
-    && score >= 0
-    && score <= 100
-    && typeof scoreRationale === "string"
-    && scoreRationale.length > 0
-    && isOneOf(label, legitimacyLabels)
-    && isOneOf(confidence, legitimacyConfidenceLevels)
-    && typeof summary === "string"
-    && summary.length > 0
-    && Array.isArray(explanations)
-    && explanations.length >= 2
-    && explanations.length <= 4
-    && explanations.every(isExplanation)
-    && isCitationAssessment(citationAssessment)
-    && typeof recommendedNextStep === "string"
-    && recommendedNextStep.length > 0;
+  const {
+    citationAssessment,
+    confidence,
+    explanations,
+    label,
+    recommendedNextStep,
+    score,
+    scoreRationale,
+    summary,
+  } = value;
+  return (
+    typeof score === "number" &&
+    Number.isInteger(score) &&
+    score >= 0 &&
+    score <= 100 &&
+    typeof scoreRationale === "string" &&
+    scoreRationale.length > 0 &&
+    isOneOf(label, legitimacyLabels) &&
+    isOneOf(confidence, legitimacyConfidenceLevels) &&
+    typeof summary === "string" &&
+    summary.length > 0 &&
+    Array.isArray(explanations) &&
+    explanations.length >= 2 &&
+    explanations.length <= 4 &&
+    explanations.every(isExplanation) &&
+    isCitationAssessment(citationAssessment) &&
+    typeof recommendedNextStep === "string" &&
+    recommendedNextStep.length > 0
+  );
 }
 
-function isExplanation(value: unknown): value is LegitimacyAnalysis["explanations"][number] {
-  return isRecord(value)
-    && typeof value.title === "string"
-    && value.title.length > 0
-    && typeof value.detail === "string"
-    && value.detail.length > 0
-    && isOneOf(value.impact, legitimacyImpactTypes);
+function isExplanation(
+  value: unknown,
+): value is LegitimacyAnalysis["explanations"][number] {
+  return (
+    isRecord(value) &&
+    typeof value.title === "string" &&
+    value.title.length > 0 &&
+    typeof value.detail === "string" &&
+    value.detail.length > 0 &&
+    isOneOf(value.impact, legitimacyImpactTypes)
+  );
 }
 
-function isCitationAssessment(value: unknown): value is LegitimacyAnalysis["citationAssessment"] {
-  return isRecord(value)
-    && isOneOf(value.status, citationAssessmentTypes)
-    && typeof value.detail === "string"
-    && value.detail.length > 0;
+function isCitationAssessment(
+  value: unknown,
+): value is LegitimacyAnalysis["citationAssessment"] {
+  return (
+    isRecord(value) &&
+    isOneOf(value.status, citationAssessmentTypes) &&
+    typeof value.detail === "string" &&
+    value.detail.length > 0
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function isOneOf<const T extends readonly string[]>(value: unknown, allowed: T): value is T[number] {
-  return typeof value === "string" && (allowed as readonly string[]).includes(value);
+function isOneOf<const T extends readonly string[]>(
+  value: unknown,
+  allowed: T,
+): value is T[number] {
+  return (
+    typeof value === "string" && (allowed as readonly string[]).includes(value)
+  );
 }
 
 function formatRemainingTime(milliseconds: number) {
