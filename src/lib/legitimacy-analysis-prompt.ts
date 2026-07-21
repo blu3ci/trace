@@ -18,6 +18,8 @@ The follow are considered VERY suspicious behavior and must be flagged:
 * Significant changes in recorded WPM (>40 wpm) between consecutive saves with big additions.
 * Sustained (meaning like for a large chunk of text) large WPM (>80 WPM) indicates writing without taking time to think about what they are writing.
 
+EXAMPLE OF A CITATION THAT WOULD NOT TRIGGER SUSPICION DESPITE MEETING THE CRITERIA OF THE ABOVE:
+"Injustice anywhere is a threat to justice everywhere. We are caught in an inescapable network of mutuality, tied in a single garment of destiny. Whatever affects one directly, affects all indirectly" (King 30).
 
 EXAMPLES (remember you must consider the text context of these milestones as well):
 SUSPICIOUS MILESTONES:
