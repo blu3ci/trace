@@ -59,6 +59,12 @@ pnpm start
 | `pnpm db:migrate` | Apply database migrations. |
 | `pnpm db:studio` | Open Drizzle Studio. |
 
+## AI tooling used
+
+- Codex was used to assist with implementation tasks such as refactors, schema updates, file scaffolding, and iterative code edits in this repository.
+- GPT-5.6 was used to draft and refine product language, guardrails, and roadmap documentation for the assignment authenticity analysis workflow.
+- All AI-assisted output was reviewed and adjusted by a human before being treated as final project behavior or policy guidance. 
+
 ## Assignment authenticity analysis roadmap
 
 ### Product goal
