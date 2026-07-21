@@ -9,7 +9,7 @@ trace is a Next.js application built with React, Tailwind CSS, Clerk authenticat
 1. [Build and run locally](#build-and-run-locally)
 1. [Production build](#production-build)
 1. [Available commands](#available-commands)
-1. [How we used Codex](#how-we-used-codex)
+1. [How we used Codex and GPT-5.6](#how-we-used-codex-and-gpt-56)
 
 ## Prerequisites
 
