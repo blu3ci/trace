@@ -46,7 +46,7 @@ pnpm --version
    cp .env.example .env
    ```
 
-3. Fill in `.env` with your Clerk keys and `DATABASE_URL`.
+3. Fill in `.env` with your Clerk keys, OpenAI API key, and `DATABASE_URL`.
 
 4. Generate and apply database migrations:
 
