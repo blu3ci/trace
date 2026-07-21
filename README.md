@@ -82,8 +82,18 @@ pnpm start
 | `pnpm db:migrate`  | Apply database migrations.            |
 | `pnpm db:studio`   | Open Drizzle Studio.                  |
 
+<<<<<<< HEAD
 # How we used Codex and GPT-5.6
 Codex and GPT-5.6 Terra were used for most of the tasks in this project due to its high intelligence and the fact that we could not get access to GPT-5.6 Sol for this project.
+=======
+## AI tooling used
+
+- Codex was used to assist with implementation tasks such as refactors, schema updates, file scaffolding, and iterative code edits in this repository.
+- GPT-5.6 was used to draft and refine product language, guardrails, and roadmap documentation for the assignment authenticity analysis workflow.
+- All AI-assisted output was reviewed and adjusted by a human before being treated as final project behavior or policy guidance. 
+
+## Assignment authenticity analysis roadmap
+>>>>>>> b1751f93483a10e675b918f4e068a8cdc9a4b434
 
 On the frontend, Codex was used immensely. We had Codex develop a unique UI style for our application to keep it consistent. It chose a special shade of green (`#315943`) to use throughout our app and helped keep our UI components consistent and reusable by moving them to the `/components` folder as specified by the `AGENTS.md` file. Codex was also used for styling the document editor and writing code to ensure its behavior was similar to Google Docs, which is very important since users will need to migrate to our service to write their essay, so we would want the editor to feel familiar. Codex was very useful when it came to trying new things. For example, Clerk, Next.js, and the OpenAI API were new to most of the people on the team. Thanks to Codex, and its seamless integration with agent skills, all we had to do was install the skills for each of these tools and now Codex was a certified expert. With Clerk, it was able to ensure that it was writing up-to-date and secure authentication code with rule-based access control logic that separates teachers from students in our app. With its skills in Next.js, it was able to easily integrate the OpenAI API into our app whilst following all of the best practices for Next.js to ensure that our app stays performant even with numerous AI-summarizations being queued and created a rate-limiting system that resets every 10 minutes to ensure no one abuses the AI-summarization feature. It even generated an API key for OpenAI for us, saving us from doing any manual configuration on the API dashboard. Codex's intelligence especially shines when it was writing the Drizzle code to interact with our database. Since Drizzle is a fairly new ORM, no official skills exist for it yet. However, a link to its documentation in the `AGENTS.md` file was all that was needed to ensure that it could write safe and performant database queries with little to no human involvement. It was also able to ensure that our migrations did not fail during testing by setting certain fields as nullable, thus making our application development experience extremely smooth as even the largest of database additions, like when it came to introducing rule-based access control for the first time or making big changes to the assignment receipts to introduce AI-summarization. It was also able to switch our codebase from the old Drizzle relations API to the newer `defineRelations` API without having a `skills.md` to reference (just the documentation link in the `AGENTS.md`).
 
